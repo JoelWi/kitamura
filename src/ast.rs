@@ -24,7 +24,6 @@ pub struct ASTNode {
 }
 
 pub fn construct_ast(parsed_tokens: Vec<Vec<Token>>) -> AST {
-    println!("{:#?}", parsed_tokens);
     let mut open_brace_count = 0;
 
     let mut constructed_ast = AST { nodes: vec![] };
@@ -102,18 +101,16 @@ pub fn construct_ast(parsed_tokens: Vec<Vec<Token>>) -> AST {
         }
 
         // Sanitise whitespace only tokens good idea?
-        if !constructed_ast.nodes.is_empty()
-            && (ast_node.identifier == ASTNodeIdentifier::LoopEnd
+
+        let last_node = constructed_ast.nodes.last();
+
+        if let Some(last_node) = last_node {
+            if (ast_node.identifier == ASTNodeIdentifier::LoopEnd
                 || ast_node.identifier == ASTNodeIdentifier::Loop)
-            && constructed_ast
-                .nodes
-                .last()
-                .unwrap()
-                .value
-                .replace(' ', "")
-                .is_empty()
-        {
-            constructed_ast.nodes.pop();
+                && last_node.value.replace(' ', "").is_empty()
+            {
+                constructed_ast.nodes.pop();
+            }
         }
 
         if ast_node.identifier == ASTNodeIdentifier::NewLine {
