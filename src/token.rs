@@ -53,7 +53,7 @@ pub fn generate_tokens(template_html: String) -> Vec<Token> {
         match special_char_match {
             true => {
                 // Push the text token if prev token wasn't special
-                if token.value.len() > 0 {
+                if !token.value.is_empty() {
                     tokens.push(token);
                 }
 
@@ -68,7 +68,7 @@ pub fn generate_tokens(template_html: String) -> Vec<Token> {
                     '#' => token.identifier = Identifier::Pound,
                     '\n' => {
                         token.identifier = Identifier::NewLine;
-                        current_line = current_line + 1;
+                        current_line += 1;
                         token.line_end = current_line;
                         i = 0;
                     }
@@ -82,12 +82,12 @@ pub fn generate_tokens(template_html: String) -> Vec<Token> {
             }
             false => token.value.push(char),
         }
-        i = i + 1;
+        i += 1;
         token.pos_end = i;
     }
 
     // Push final token builder after loop exit
-    if token.value.len() > 0 {
+    if !token.value.is_empty() {
         tokens.push(token);
     }
     tokens
@@ -108,7 +108,7 @@ pub fn parse_tokens(tokens: Vec<Token>) -> Vec<Vec<Token>> {
             }
             Identifier::Pound => variable.push(token),
             Identifier::Text => {
-                if variable.len() > 0 {
+                if !variable.is_empty() {
                     variable.push(token);
                 } else {
                     variables.push(vec![token]);

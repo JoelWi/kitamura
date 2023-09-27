@@ -45,9 +45,9 @@ pub fn construct_ast(parsed_tokens: Vec<Vec<Token>>) -> AST {
             // Validation
             if token.identifier != Identifier::Text {
                 if token.value == "{" {
-                    open_brace_count = open_brace_count + 1;
+                    open_brace_count += 1;
                 }
-                if open_brace_count > 1 && bad_token.value.len() == 0 {
+                if open_brace_count > 1 && bad_token.value.is_empty() {
                     bad_token = token.clone();
                 }
             } else {
@@ -69,7 +69,7 @@ pub fn construct_ast(parsed_tokens: Vec<Vec<Token>>) -> AST {
             if opening_chars == "${" && ast_node.value.ends_with('}') {
                 ast_node.identifier = ASTNodeIdentifier::Variable;
             } else if opening_chars == "{#" && ast_node.value.ends_with("#}") {
-                let constructor = ast_node.value.split(" ").nth(0).unwrap();
+                let constructor = ast_node.value.split(' ').next().unwrap();
                 match constructor {
                     "{#endfor#}" => ast_node.identifier = ASTNodeIdentifier::LoopEnd,
                     "{#for" => {
@@ -102,20 +102,18 @@ pub fn construct_ast(parsed_tokens: Vec<Vec<Token>>) -> AST {
         }
 
         // Sanitise whitespace only tokens good idea?
-        if constructed_ast.nodes.len() > 0
+        if !constructed_ast.nodes.is_empty()
             && (ast_node.identifier == ASTNodeIdentifier::LoopEnd
                 || ast_node.identifier == ASTNodeIdentifier::Loop)
-        {
-            if constructed_ast
+            && constructed_ast
                 .nodes
                 .last()
                 .unwrap()
                 .value
-                .replace(" ", "")
+                .replace(' ', "")
                 .is_empty()
-            {
-                constructed_ast.nodes.pop();
-            }
+        {
+            constructed_ast.nodes.pop();
         }
 
         if ast_node.identifier == ASTNodeIdentifier::NewLine {
@@ -154,7 +152,7 @@ pub fn construct_ast(parsed_tokens: Vec<Vec<Token>>) -> AST {
                     loop_node_vec.pop();
                 }
 
-                if loop_node_vec.len() > 0 {
+                if !loop_node_vec.is_empty() {
                     let length = loop_node_vec.len() - 1;
                     let latest_node = &mut loop_node_vec[length].children.as_mut().unwrap();
                     latest_node.nodes.push(node);
@@ -163,12 +161,12 @@ pub fn construct_ast(parsed_tokens: Vec<Vec<Token>>) -> AST {
                 }
             }
             ASTNodeIdentifier::NewLine => {
-                if loop_node_vec.len() > 0 {
+                if !loop_node_vec.is_empty() {
                     let length = loop_node_vec.len() - 1;
                     let latest_node = &mut loop_node_vec[length].children.as_mut().unwrap();
 
                     if new_ast.nodes.last().unwrap().identifier != ASTNodeIdentifier::NewLine
-                        || latest_node.nodes.len() > 0
+                        || !latest_node.nodes.is_empty()
                     {
                         latest_node.nodes.push(node);
                     }
@@ -177,7 +175,7 @@ pub fn construct_ast(parsed_tokens: Vec<Vec<Token>>) -> AST {
                 }
             }
             _ => {
-                if loop_node_vec.len() > 0 {
+                if !loop_node_vec.is_empty() {
                     let length = loop_node_vec.len() - 1;
                     let latest_node = &mut loop_node_vec[length].children.as_mut().unwrap();
                     latest_node.nodes.push(node);
@@ -189,12 +187,12 @@ pub fn construct_ast(parsed_tokens: Vec<Vec<Token>>) -> AST {
     }
 
     // Catch for any open loop control flows that weren't closed
-    if loop_node_vec.len() > 0 {
+    if !loop_node_vec.is_empty() {
         panic!(
             "Control flow '{}' has no closing statement",
             loop_node_vec.last().unwrap().value
         );
     }
 
-    return new_ast;
+    new_ast
 }

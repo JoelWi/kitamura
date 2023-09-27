@@ -25,8 +25,7 @@ fn loop_data_renders_successfully() {
         </ul>
     </ul>
 </html>"
-        .replace(" ", "")
-        .replace("\n", "");
+        .replace([' ', '\n'], "");
     let mut params: HashMap<String, serde_json::Value> = HashMap::new();
     params.insert(
         "fruits".to_string(),

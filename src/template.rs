@@ -5,8 +5,8 @@ use crate::{
     token::{generate_tokens, parse_tokens},
 };
 
-fn validate_iterator(node: &ASTNode, node_iterator_name: &String, open_loop_stack: &Vec<String>) {
-    if !open_loop_stack.contains(&node_iterator_name) {
+fn validate_iterator(node: &ASTNode, node_iterator_name: &String, open_loop_stack: &[String]) {
+    if !open_loop_stack.contains(node_iterator_name) {
         println!("{:#?}", node);
         panic!(
             "\nError with variable: {}\n{}{}\nDoes not exist: {}\n",
@@ -38,12 +38,12 @@ fn validate_property(
 }
 
 fn validate_loop_data(node: &ASTNode, data: Option<&serde_json::Value>) -> serde_json::Value {
-    if data.is_some() {
-        data.unwrap().to_owned()
+    if let Some(data) = data {
+        data.to_owned()
     } else {
         println!("{:#?}", node);
         let construct_token = node.tokens.get(2).unwrap();
-        let constructor = construct_token.value.split(" ").nth(3).unwrap();
+        let constructor = construct_token.value.split(' ').nth(3).unwrap();
         panic!(
             "\nData is missing from parameter data mapping:\n{} at line {}:{}\n{}{}\n",
             node.value,
@@ -61,7 +61,7 @@ fn generate_variable_data(
 ) -> String {
     let variable = params.get(variable_key);
     match variable {
-        Some(e) => serde_json::to_string(e).unwrap().replace("\"", ""),
+        Some(e) => serde_json::to_string(e).unwrap().replace('\"', ""),
         None => panic!(
             "\n${{{}}} is missing from parameter data mapping.\n",
             variable_key
@@ -119,15 +119,15 @@ pub fn generate_template(
             }
             open_loop_stack.pop();
         } else if node.identifier == ASTNodeIdentifier::Variable {
-            let node_value_cleaned = node.value.replace("${", "").replace("}", "");
-            if node.value.contains(".") {
-                let node_iterator_name = node_value_cleaned.split(".").nth(0).unwrap().to_string();
-                let node_property_name = node_value_cleaned.split(".").last().unwrap();
+            let node_value_cleaned = node.value.replace("${", "").replace('}', "");
+            if node.value.contains('.') {
+                let node_iterator_name = node_value_cleaned.split('.').next().unwrap().to_string();
+                let node_property_name = node_value_cleaned.split('.').last().unwrap();
 
                 validate_iterator(&node, &node_iterator_name, &open_loop_stack);
-                validate_property(&node, &node_iterator_name, &node_property_name, &params);
+                validate_property(&node, &node_iterator_name, node_property_name, &params);
 
-                let variable = generate_variable_data(&node_property_name, &params);
+                let variable = generate_variable_data(node_property_name, &params);
                 html.push_str(&variable);
             } else {
                 let variable = generate_variable_data(&node_value_cleaned, &params);
@@ -151,6 +151,6 @@ pub fn render_template(
     println!("{:#?}", ast);
     println!("PARAMETERS: {:#?}", parameters);
     let loop_stack: Vec<String> = vec![];
-    let rendered_html = generate_template(ast, parameters, loop_stack);
-    rendered_html
+
+    generate_template(ast, parameters, loop_stack)
 }
