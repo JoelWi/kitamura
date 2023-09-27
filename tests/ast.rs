@@ -30,6 +30,7 @@ fn nested_loops_correctly_get_children_nodes() {
         <li>Oceania</li>
         <ul>
             <li>Australia</li>
+            <li>New Zealand</li>
         </ul>
     </ul>
   </html>";
@@ -41,6 +42,9 @@ fn nested_loops_correctly_get_children_nodes() {
             "countries": [
               {
                 "name": "Australia"
+              },
+              {
+                "name": "New Zealand"
               }
             ],
             "name": "Oceania"

@@ -7,7 +7,6 @@ use crate::{
 
 fn validate_iterator(node: &ASTNode, node_iterator_name: &String, open_loop_stack: &[String]) {
     if !open_loop_stack.contains(node_iterator_name) {
-        println!("{:#?}", node);
         panic!(
             "\nError with variable: {}\n{}{}\nDoes not exist: {}\n",
             node.value,
@@ -25,7 +24,6 @@ fn validate_property(
     params: &HashMap<String, serde_json::Value>,
 ) {
     if params.get(node_property_name).is_none() {
-        println!("{:#?}", node);
         panic!(
             "\nError with variable: {}\n{}{}\n'{}' is not a property of '{}'\n",
             node.value,
@@ -41,7 +39,6 @@ fn validate_loop_data(node: &ASTNode, data: Option<&serde_json::Value>) -> serde
     if let Some(data) = data {
         data.to_owned()
     } else {
-        println!("{:#?}", node);
         let construct_token = node.tokens.get(2).unwrap();
         let constructor = construct_token.value.split(' ').nth(3).unwrap();
         panic!(
@@ -148,8 +145,6 @@ pub fn render_template(
     let tokens = generate_tokens(template_html);
     let parsed_tokens = parse_tokens(tokens);
     let ast = construct_ast(parsed_tokens);
-    println!("{:#?}", ast);
-    println!("PARAMETERS: {:#?}", parameters);
     let loop_stack: Vec<String> = vec![];
 
     generate_template(ast, parameters, loop_stack)
