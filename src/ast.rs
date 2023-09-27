@@ -23,9 +23,35 @@ pub struct ASTNode {
     pub children: Option<AST>,
 }
 
-pub fn construct_ast(parsed_tokens: Vec<Vec<Token>>) -> AST {
+fn assign_identity(ast_node: &mut ASTNode) -> Result<(), String> {
+    let opening_chars = &ast_node.value[0..2];
+    if opening_chars == "${" && ast_node.value.ends_with('}') {
+        ast_node.identifier = ASTNodeIdentifier::Variable;
+    } else if opening_chars == "{#" && ast_node.value.ends_with("#}") {
+        let control_flow = ast_node.value.split(' ').next().unwrap();
+        match control_flow {
+            "{#endfor#}" => ast_node.identifier = ASTNodeIdentifier::LoopEnd,
+            "{#for" => {
+                ast_node.identifier = ASTNodeIdentifier::Loop;
+                ast_node.children = Some(AST { nodes: vec![] });
+            }
+            _ => {
+                let construct_token = ast_node.tokens.get(2).unwrap();
+                return Err(format!(
+                    "\nUnknown construct: {} at line {}:{}\n{}{}\n",
+                    ast_node.value,
+                    construct_token.line_start,
+                    construct_token.pos_start,
+                    " ".to_string().repeat(21),
+                    "^".to_string().repeat(control_flow.len() - 2),
+                ));
+            }
+        }
+    };
+    Ok(())
+}
+pub fn construct_ast(parsed_tokens: Vec<Vec<Token>>) -> Result<AST, String> {
     let mut open_brace_count = 0;
-
     let mut constructed_ast = AST { nodes: vec![] };
 
     // Iterate over groupings of tokens that make up something e.g. variable
@@ -42,19 +68,17 @@ pub fn construct_ast(parsed_tokens: Vec<Vec<Token>>) -> AST {
         // Iterate over a group and construct to ASTNode
         for token in token_group {
             // Validation
-            if token.identifier != Identifier::Text {
-                if token.value == "{" {
-                    open_brace_count += 1;
+            match token.identifier {
+                Identifier::Text => ast_node.identifier = ASTNodeIdentifier::Text,
+                Identifier::NewLine => ast_node.identifier = ASTNodeIdentifier::NewLine,
+                _ => {
+                    if token.value == "{" {
+                        open_brace_count += 1;
+                    }
+                    if open_brace_count > 1 && bad_token.value.is_empty() {
+                        bad_token = token.clone();
+                    }
                 }
-                if open_brace_count > 1 && bad_token.value.is_empty() {
-                    bad_token = token.clone();
-                }
-            } else {
-                ast_node.identifier = ASTNodeIdentifier::Text;
-            }
-
-            if token.identifier == Identifier::NewLine {
-                ast_node.identifier = ASTNodeIdentifier::NewLine
             }
 
             // ASTNode construction
@@ -64,44 +88,23 @@ pub fn construct_ast(parsed_tokens: Vec<Vec<Token>>) -> AST {
 
         // Can add other stuff here when it comes e.g. conditions
         if ast_node.value.len() > 2 {
-            let opening_chars = &ast_node.value[0..2];
-            if opening_chars == "${" && ast_node.value.ends_with('}') {
-                ast_node.identifier = ASTNodeIdentifier::Variable;
-            } else if opening_chars == "{#" && ast_node.value.ends_with("#}") {
-                let constructor = ast_node.value.split(' ').next().unwrap();
-                match constructor {
-                    "{#endfor#}" => ast_node.identifier = ASTNodeIdentifier::LoopEnd,
-                    "{#for" => {
-                        ast_node.identifier = ASTNodeIdentifier::Loop;
-                        ast_node.children = Some(AST { nodes: vec![] });
-                    }
-                    _ => {
-                        let construct_token = ast_node.tokens.get(2).unwrap();
-                        panic!(
-                            "\nUnknown construct: {} at line {}:{}\n{}{}\n",
-                            ast_node.value,
-                            construct_token.line_start,
-                            construct_token.pos_start,
-                            " ".to_string().repeat(21),
-                            "^".to_string().repeat(constructor.len() - 2),
-                        )
-                    }
-                }
+            match assign_identity(&mut ast_node) {
+                Ok(()) => {}
+                Err(e) => return Err(e),
             }
         }
 
         // Variable error handling
         if open_brace_count > 1 {
-            panic!(
+            return Err(format!(
                 "Error: Extra opening {{ found at line: {} position: {} in {}",
                 bad_token.line_start,
                 bad_token.pos_start - 1,
                 ast_node.value
-            );
+            ));
         }
 
         // Sanitise whitespace only tokens good idea?
-
         let last_node = constructed_ast.nodes.last();
 
         if let Some(last_node) = last_node {
@@ -113,12 +116,13 @@ pub fn construct_ast(parsed_tokens: Vec<Vec<Token>>) -> AST {
             }
         }
 
-        if ast_node.identifier == ASTNodeIdentifier::NewLine {
-            if constructed_ast.nodes.last().unwrap().identifier != ASTNodeIdentifier::LoopEnd {
-                constructed_ast.nodes.push(ast_node);
+        match ast_node.identifier {
+            ASTNodeIdentifier::NewLine => {
+                if constructed_ast.nodes.last().unwrap().identifier != ASTNodeIdentifier::LoopEnd {
+                    constructed_ast.nodes.push(ast_node);
+                }
             }
-        } else {
-            constructed_ast.nodes.push(ast_node);
+            _ => constructed_ast.nodes.push(ast_node),
         }
 
         open_brace_count = 0;
@@ -185,11 +189,11 @@ pub fn construct_ast(parsed_tokens: Vec<Vec<Token>>) -> AST {
 
     // Catch for any open loop control flows that weren't closed
     if !loop_node_vec.is_empty() {
-        panic!(
+        return Err(format!(
             "Control flow '{}' has no closing statement",
             loop_node_vec.last().unwrap().value
-        );
+        ));
     }
 
-    new_ast
+    Ok(new_ast)
 }
