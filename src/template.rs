@@ -51,11 +51,11 @@ fn validate_loop_data(
         let construct_token = node.tokens.get(2).unwrap();
         let constructor = construct_token.value.split(' ').nth(3).unwrap();
         Err(format!(
-            "\nData is missing from parameter data mapping for loop:\n{} at line {}:{}\n{}{}\n",
+            "\nData is missing from parameter data mapping for this loop:\n{} at line {}:{}\n{}{}\n",
             node.value,
             construct_token.line_start,
             construct_token.pos_start,
-            " ".to_string().repeat(17),
+            " ".to_string().repeat(node.value.len() - constructor.len() - 2),
             "^".to_string().repeat(constructor.len()),
         ))
     }

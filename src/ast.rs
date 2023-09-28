@@ -189,9 +189,12 @@ pub fn construct_ast(parsed_tokens: Vec<Vec<Token>>) -> Result<Ast, String> {
 
     // Catch for any open loop control flows that weren't closed
     if !loop_node_vec.is_empty() {
+        let last_node = loop_node_vec.last().unwrap();
         return Err(format!(
-            "Control flow '{}' has no closing statement",
-            loop_node_vec.last().unwrap().value
+            "\n'{}' has no closing statement\nat line: {}:{}\n",
+            last_node.value,
+            last_node.tokens.first().unwrap().line_start,
+            last_node.tokens.first().unwrap().pos_start
         ));
     }
 
