@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    ast::{construct_ast, ASTNode, ASTNodeIdentifier, AST},
+    ast::{construct_ast, ASTNode, ASTNodeIdentifier, Ast},
     token::{generate_tokens, parse_tokens},
 };
 
@@ -51,7 +51,7 @@ fn validate_loop_data(
         let construct_token = node.tokens.get(2).unwrap();
         let constructor = construct_token.value.split(' ').nth(3).unwrap();
         Err(format!(
-            "\nData is missing from parameter data mapping:\n{} at line {}:{}\n{}{}\n",
+            "\nData is missing from parameter data mapping for loop:\n{} at line {}:{}\n{}{}\n",
             node.value,
             construct_token.line_start,
             construct_token.pos_start,
@@ -76,7 +76,7 @@ fn generate_variable_data(
 }
 
 pub fn generate_template(
-    ast: AST,
+    ast: Ast,
     params: HashMap<String, serde_json::Value>,
     loop_stack: Vec<String>,
 ) -> Result<String, String> {
@@ -138,6 +138,7 @@ pub fn generate_template(
                     Ok(()) => (),
                     Err(e) => return Err(e),
                 }
+
                 match validate_property(&node, &node_iterator_name, node_property_name, &params) {
                     Ok(()) => (),
                     Err(e) => return Err(e),
@@ -145,7 +146,8 @@ pub fn generate_template(
 
                 match generate_variable_data(node_property_name, &params) {
                     Ok(data) => html.push_str(&data),
-                    Err(e) => return Err(e),
+                    // validate_property catches the Err already for this flow
+                    _ => {}
                 };
             } else {
                 match generate_variable_data(&node_value_cleaned, &params) {

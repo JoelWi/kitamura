@@ -1,7 +1,7 @@
 use crate::token::{Identifier, Token};
 
 #[derive(Debug, Default, Clone)]
-pub struct AST {
+pub struct Ast {
     pub nodes: Vec<ASTNode>,
 }
 
@@ -20,7 +20,7 @@ pub struct ASTNode {
     pub identifier: ASTNodeIdentifier,
     pub value: String,
     pub tokens: Vec<Token>,
-    pub children: Option<AST>,
+    pub children: Option<Ast>,
 }
 
 fn assign_identity(ast_node: &mut ASTNode) -> Result<(), String> {
@@ -33,7 +33,7 @@ fn assign_identity(ast_node: &mut ASTNode) -> Result<(), String> {
             "{#endfor#}" => ast_node.identifier = ASTNodeIdentifier::LoopEnd,
             "{#for" => {
                 ast_node.identifier = ASTNodeIdentifier::Loop;
-                ast_node.children = Some(AST { nodes: vec![] });
+                ast_node.children = Some(Ast { nodes: vec![] });
             }
             _ => {
                 let construct_token = ast_node.tokens.get(2).unwrap();
@@ -50,9 +50,9 @@ fn assign_identity(ast_node: &mut ASTNode) -> Result<(), String> {
     };
     Ok(())
 }
-pub fn construct_ast(parsed_tokens: Vec<Vec<Token>>) -> Result<AST, String> {
+pub fn construct_ast(parsed_tokens: Vec<Vec<Token>>) -> Result<Ast, String> {
     let mut open_brace_count = 0;
-    let mut constructed_ast = AST { nodes: vec![] };
+    let mut constructed_ast = Ast { nodes: vec![] };
 
     // Iterate over groupings of tokens that make up something e.g. variable
     for token_group in parsed_tokens {
@@ -130,7 +130,7 @@ pub fn construct_ast(parsed_tokens: Vec<Vec<Token>>) -> Result<AST, String> {
 
     // Naive iteration to move children nodes into parent
 
-    let mut new_ast = AST { nodes: vec![] };
+    let mut new_ast = Ast { nodes: vec![] };
     let mut loop_node_vec: Vec<ASTNode> = vec![];
 
     for node in constructed_ast.nodes {

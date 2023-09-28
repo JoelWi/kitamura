@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use kitamura::template::render_template;
+use kitamura::render_template;
 
 #[test]
 #[should_panic]

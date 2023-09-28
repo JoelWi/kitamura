@@ -1,7 +1,6 @@
-use std::collections::HashMap;
-
-use kitamura::template::render_template;
+use kitamura::render_template;
 use serde_json::json;
+use std::collections::HashMap;
 
 #[test]
 #[should_panic]
