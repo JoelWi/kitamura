@@ -144,11 +144,9 @@ pub fn generate_template(
                     Err(e) => return Err(e),
                 }
 
-                match generate_variable_data(node_property_name, &params) {
-                    Ok(data) => html.push_str(&data),
-                    // validate_property catches the Err already for this flow
-                    _ => {}
-                };
+                if let Ok(data) = generate_variable_data(node_property_name, &params) {
+                    html.push_str(&data)
+                }
             } else {
                 match generate_variable_data(&node_value_cleaned, &params) {
                     Ok(data) => html.push_str(&data),
