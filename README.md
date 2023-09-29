@@ -82,5 +82,5 @@ assert_eq!(output_html,
      <li>50g</li>
    </ul>
  </ul>
-/html>");
+</html>");
 ```
