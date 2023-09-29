@@ -1,10 +1,11 @@
 [package]
 name = "kitamura"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 description = "HTML templating engine"
 license = "MIT"
 repository = "https://github.com/JoelWi/kitamura"
+documentation = "https://docs.rs/kitamura"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
