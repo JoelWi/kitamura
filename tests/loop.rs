@@ -26,7 +26,7 @@ fn loop_data_renders_successfully() {
     </ul>
 </html>"
         .replace([' ', '\n'], "");
-    let mut params: HashMap<String, serde_json::Value> = HashMap::new();
+    let mut params = HashMap::new();
     params.insert(
         "fruits".to_string(),
         json!([{"name": "Lemon", "colour": "Yellow", "weight": "150g"},
@@ -41,7 +41,7 @@ fn loop_data_renders_successfully() {
 #[should_panic]
 fn loop_data_missing() {
     let html = "<html><ul>{#for fruit in fruits#}<ul><li>${fruit.name}</li><li>${fruit.colour}</li><li>${fruit.weight}</li></ul>{#endfor#}</ul></html>";
-    let params: HashMap<String, serde_json::Value> = HashMap::new();
+    let params = HashMap::new();
     let _rendered_html = render_template(html.to_string(), params);
 }
 
@@ -49,7 +49,7 @@ fn loop_data_missing() {
 #[should_panic]
 fn loop_variable_not_in_scope() {
     let html = "<html><ul>{#for fruitt in fruits#}<ul><li>${fruit.name}</li><li>${fruit.colour}</li><li>${fruit.weight}</li></ul>{#endfor#}</ul></html>";
-    let mut params: HashMap<String, serde_json::Value> = HashMap::new();
+    let mut params = HashMap::new();
     params.insert(
         "fruits".to_string(),
         json!([{"name": "Lemon", "colour": "Yellow", "weight": "150g"},
@@ -62,7 +62,7 @@ fn loop_variable_not_in_scope() {
 #[test]
 fn loop_variable_property_exists() {
     let html = "<html>{#for person in persons#}${person.first_name}{#endfor#}</html>";
-    let mut params: HashMap<String, serde_json::Value> = HashMap::new();
+    let mut params = HashMap::new();
     params.insert(
         "persons".to_string(),
         json!([{"first_name": "Joel"}, {"first_name": "Joel"}]),
@@ -75,7 +75,7 @@ fn loop_variable_property_exists() {
 #[should_panic]
 fn loop_variable_property_missing() {
     let html = "<html>{#for person in persons#}${person.first_name}{#endfor#}</html>";
-    let mut params: HashMap<String, serde_json::Value> = HashMap::new();
+    let mut params = HashMap::new();
     params.insert("persons".to_string(), json!([{"name": "Joel"}]));
     let _rendered_html = render_template(html.to_string(), params);
 }
@@ -83,7 +83,7 @@ fn loop_variable_property_missing() {
 #[test]
 fn loop_can_be_in_or_of() {
     let html = "<html>{#for person of persons#}${person.first_name}{#endfor#}</html>";
-    let mut params: HashMap<String, serde_json::Value> = HashMap::new();
+    let mut params = HashMap::new();
     params.insert(
         "persons".to_string(),
         json!([{"first_name": "Joel"}, {"first_name": "Joel"}]),

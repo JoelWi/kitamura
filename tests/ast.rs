@@ -6,7 +6,7 @@ use std::collections::HashMap;
 #[should_panic]
 fn variable_formatting_incorrect() {
     let html = "<html>${{first_name}</html>";
-    let params: HashMap<String, serde_json::Value> = HashMap::new();
+    let params = HashMap::new();
     let _rendered_html = render_template(html.to_string(), params);
 }
 
@@ -33,7 +33,7 @@ fn nested_loops_correctly_get_children_nodes() {
         </ul>
     </ul>
   </html>";
-    let mut params: HashMap<String, serde_json::Value> = HashMap::new();
+    let mut params = HashMap::new();
     params.insert(
         "continents".to_string(),
         json!([
@@ -69,11 +69,8 @@ fn whitespace_after_control_flow_statement_removed() {
         <li>Joel</li>
     </ul>
 </html>";
-    let mut params: HashMap<String, serde_json::Value> = HashMap::new();
-    params.insert(
-        "persons".to_string(),
-        json!({"persons":[{"first_name": "Joel"}]}),
-    );
+    let mut params = HashMap::new();
+    params.insert("persons".to_string(), json!({"persons":[{"first_name": "Joel"}]}));
     let rendered_html = render_template(html.to_string(), params);
     assert_eq!(rendered_html, expected_rendered_html);
 }
