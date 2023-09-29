@@ -6,6 +6,9 @@ that are in JSON.
 Below is the general idea of how to use Kitamura. Formatting of the input HTML
 is respected, and overall there are no expectations that anything but what Kitamura
 is looking for will be modified.
+
+Kitamura will return a Result, which will contain either the rendered HTML, or
+an error message.
 ```text
 Input HTML
 <html>Hello ${first_name}!</html>

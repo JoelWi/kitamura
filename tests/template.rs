@@ -16,7 +16,7 @@ fn new_line_char_appended_successfully() {
     let mut params = HashMap::new();
     params.insert("first_name".to_string(), json!("Joel"));
     let rendered_html = render_template(html.to_string(), params);
-    assert_eq!(rendered_html, expected_rendered_html);
+    assert_eq!(rendered_html.unwrap(), expected_rendered_html);
 }
 
 #[test]
@@ -29,5 +29,5 @@ fn data_mapping_key_is_also_object_in_data() {
         json!({"persons":[{"first_name": "Joel"}]}),
     );
     let rendered_html = render_template(html.to_string(), params);
-    assert_eq!(rendered_html, expected_rendered_html);
+    assert_eq!(rendered_html.unwrap(), expected_rendered_html);
 }

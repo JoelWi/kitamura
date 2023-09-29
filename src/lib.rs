@@ -7,6 +7,9 @@
 //! Below is the general idea of how to use Kitamura. Formatting of the input HTML
 //! is respected, and overall there are no expectations that anything but what Kitamura
 //! is looking for will be modified.
+//!
+//! Kitamura will return a Result, which will contain either the rendered HTML, or
+//! an error message.
 //! ```text
 //! Input HTML
 //! <html>Hello ${first_name}!</html>
@@ -35,7 +38,7 @@
 //! let mut input_data = HashMap::new();
 //! input_data.insert("first_name".to_string(), json!("Joel"));
 //!
-//! let output_html = render_template(input_html.to_string(), input_data);
+//! let output_html = render_template(input_html.to_string(), input_data).unwrap();
 //! assert_eq!(output_html, "<html>Hello Joel!</html>");
 //! ```
 //! ```
@@ -63,7 +66,7 @@
 //!{"name": "Lychee", "colour": "Red", "weight": "50g"}]),
 //!);
 //!
-//! let output_html = render_template(input_html.to_string(), input_data);
+//! let output_html = render_template(input_html.to_string(), input_data).unwrap();
 //! assert_eq!(output_html,
 //! "<html>
 //!  <ul>
@@ -92,6 +95,9 @@ mod ast;
 mod template;
 mod token;
 
-pub fn render_template(html: String, parameters: HashMap<String, serde_json::Value>) -> String {
+pub fn render_template(
+    html: String,
+    parameters: HashMap<String, serde_json::Value>,
+) -> Result<String, String> {
     template::render_template(html, parameters)
 }

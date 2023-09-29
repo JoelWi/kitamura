@@ -102,7 +102,7 @@ pub fn generate_template(
                 Err(e) => return Err(e),
             };
 
-            let list_data_with_key_name = &list_data[list_iterator_name].as_array();
+            let list_data_with_key_name = &list_data[&list_iterator_name].as_array();
 
             // Depending on the root mapping, this needs to be handled
             let loop_over = if list_data_with_key_name.is_some() {
@@ -111,7 +111,15 @@ pub fn generate_template(
                 list_data.as_array().unwrap()
             };
             for item in loop_over {
-                let value_to_string = item.as_object().unwrap();
+                let value_to_string = match item.as_object() {
+                    Some(data) => data,
+                    None => {
+                        return Err(format!(
+                            "Data was not contained inside of an object for list: {}",
+                            list_iterator_name
+                        ))
+                    }
+                };
                 let mut new_map = HashMap::new();
 
                 for (k, v) in value_to_string.iter() {
@@ -164,17 +172,14 @@ pub fn generate_template(
 pub fn render_template(
     template_html: String,
     parameters: HashMap<String, serde_json::Value>,
-) -> String {
+) -> Result<String, String> {
     let tokens = generate_tokens(template_html);
     let parsed_tokens = parse_tokens(tokens);
     let ast = match construct_ast(parsed_tokens) {
         Ok(tree) => tree,
-        Err(e) => panic!("{}", e),
+        Err(e) => return Err(e),
     };
     let loop_stack: Vec<String> = vec![];
 
-    match generate_template(ast, parameters, loop_stack) {
-        Ok(render) => render,
-        Err(e) => panic!("{}", e),
-    }
+    generate_template(ast, parameters, loop_stack)
 }

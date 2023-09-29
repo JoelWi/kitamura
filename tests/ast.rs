@@ -3,11 +3,19 @@ use serde_json::json;
 use std::collections::HashMap;
 
 #[test]
-#[should_panic]
 fn variable_formatting_incorrect() {
     let html = "<html>${{first_name}</html>";
     let params = HashMap::new();
-    let _rendered_html = render_template(html.to_string(), params);
+    let rendered_html = render_template(html.to_string(), params);
+    assert!(rendered_html.is_err())
+}
+
+#[test]
+fn variable_extra_open_brace() {
+    let html = "<html>${{first_name}</html>";
+    let params = HashMap::new();
+    let rendered_html = render_template(html.to_string(), params);
+    assert!(rendered_html.is_err())
 }
 
 #[test]
@@ -51,7 +59,7 @@ fn nested_loops_correctly_get_children_nodes() {
         ]
         ),
     );
-    let rendered_html = render_template(html.to_string(), params);
+    let rendered_html = render_template(html.to_string(), params).unwrap();
     assert_eq!(rendered_html, expected_rendered_html);
 }
 
@@ -75,5 +83,5 @@ fn whitespace_after_control_flow_statement_removed() {
         json!({"persons":[{"first_name": "Joel"}]}),
     );
     let rendered_html = render_template(html.to_string(), params);
-    assert_eq!(rendered_html, expected_rendered_html);
+    assert_eq!(rendered_html.unwrap(), expected_rendered_html);
 }
