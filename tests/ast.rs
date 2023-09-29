@@ -70,7 +70,10 @@ fn whitespace_after_control_flow_statement_removed() {
     </ul>
 </html>";
     let mut params = HashMap::new();
-    params.insert("persons".to_string(), json!({"persons":[{"first_name": "Joel"}]}));
+    params.insert(
+        "persons".to_string(),
+        json!({"persons":[{"first_name": "Joel"}]}),
+    );
     let rendered_html = render_template(html.to_string(), params);
     assert_eq!(rendered_html, expected_rendered_html);
 }

@@ -24,7 +24,10 @@ fn data_mapping_key_is_also_object_in_data() {
     let html = "<html>{#for person in persons#}${person.first_name}{#endfor#}</html>";
     let expected_rendered_html = "<html>Joel</html>";
     let mut params = HashMap::new();
-    params.insert("persons".to_string(), json!({"persons":[{"first_name": "Joel"}]}));
+    params.insert(
+        "persons".to_string(),
+        json!({"persons":[{"first_name": "Joel"}]}),
+    );
     let rendered_html = render_template(html.to_string(), params);
     assert_eq!(rendered_html, expected_rendered_html);
 }

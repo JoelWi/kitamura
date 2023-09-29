@@ -10,31 +10,31 @@
 //! ```text
 //! Input HTML
 //! <html>Hello ${first_name}!</html>
-//! 
+//!
 //! Input Data
 //! {
 //!   "first_name": "Joel"
 //! }
-//! 
+//!
 //! Output HTML
 //! <html>Hello Joel!</html>
 //! ```
-//! 
+//!
 //! # Features
 //! Variables
-//! 
+//!
 //! Lists
-//! 
+//!
 //! # Examples
 //! ```
 //! use std::collections::HashMap;
 //! use kitamura::render_template;
 //! use serde_json::json;
-//! 
+//!
 //! let input_html = "<html>Hello ${first_name}!</html>";
 //! let mut input_data = HashMap::new();
 //! input_data.insert("first_name".to_string(), json!("Joel"));
-//! 
+//!
 //! let output_html = render_template(input_html.to_string(), input_data);
 //! assert_eq!(output_html, "<html>Hello Joel!</html>");
 //! ```
@@ -42,7 +42,7 @@
 //! use std::collections::HashMap;
 //! use kitamura::render_template;
 //! use serde_json::json;
-//! 
+//!
 //! let input_html =
 //! "<html>
 //!  <ul>
@@ -62,7 +62,7 @@
 //!{"name": "shiikuwasha", "colour": "Green", "weight": "80g"},
 //!{"name": "Lychee", "colour": "Red", "weight": "50g"}]),
 //!);
-//! 
+//!
 //! let output_html = render_template(input_html.to_string(), input_data);
 //! assert_eq!(output_html,
 //! "<html>
