@@ -1,14 +1,14 @@
 //! # Kitamura 北村
-//! Kitamura is an HTML templating engine for rendering HTML based on placeholders
-//! defined in your HTML. Placeholders are provided in the form of content parameters
+//! Kitamura is a templating engine for rendering templates based on placeholders
+//! defined in your templates. Placeholders are provided in the form of content parameters
 //! that are in JSON.
 //!
 //! # Overview
-//! Below is the general idea of how to use Kitamura. Formatting of the input HTML
+//! Below is the general idea of how to use Kitamura. Formatting of the template
 //! is respected, and overall there are no expectations that anything but what Kitamura
 //! is looking for will be modified.
 //!
-//! Kitamura will return a Result, which will contain either the rendered HTML, or
+//! Kitamura will return a Result, which will contain either the rendered template, or
 //! an error message.
 //! ```text
 //! Input HTML

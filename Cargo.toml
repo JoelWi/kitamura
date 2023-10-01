@@ -2,7 +2,7 @@
 name = "kitamura"
 version = "0.1.6"
 edition = "2021"
-description = "HTML templating engine"
+description = "Templating engine"
 license = "MIT"
 repository = "https://github.com/JoelWi/kitamura"
 documentation = "https://docs.rs/kitamura"
