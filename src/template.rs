@@ -27,8 +27,10 @@ fn validate_property(
     node_iterator_name: &String,
     node_property_name: &str,
     params: &HashMap<String, serde_json::Value>,
+    parent_params: &HashMap<String, serde_json::Value>,
 ) -> Result<(), String> {
-    if params.get(node_property_name).is_none() {
+    let x = parent_params.get(node_iterator_name).unwrap();
+    if params.get(node_property_name).is_none() && x.get(node_property_name).is_none() {
         return Err(format!(
             "\nError with variable: {}\n{}{}\n'{}' is not a property of '{}'\n",
             node.value,
@@ -78,6 +80,7 @@ fn generate_variable_data(
 pub fn generate_template(
     ast: Ast,
     params: HashMap<String, serde_json::Value>,
+    parent_params: HashMap<String, serde_json::Value>,
     loop_stack: Vec<String>,
 ) -> Result<String, String> {
     let mut html = String::new();
@@ -88,15 +91,28 @@ pub fn generate_template(
             html.push_str(&node.value)
         } else if node.identifier == ASTNodeIdentifier::Loop {
             let variable_iterator_name = node.value.split_whitespace().nth(1).unwrap().to_string();
-            open_loop_stack.push(variable_iterator_name);
-            let list_iterator_name = node
+            open_loop_stack.push(variable_iterator_name.clone());
+            let the_node_str = node
                 .value
                 .replace("#}", "")
                 .split_whitespace()
                 .nth(3)
                 .unwrap()
                 .to_string();
-            let data_retrieval = params.get(&*list_iterator_name);
+            let list_iterator_name = if the_node_str.contains('.') {
+                let the_split = the_node_str.split('.');
+
+                the_split.last().unwrap()
+            } else {
+                &the_node_str
+            };
+
+            let data_retrieval = if params.get(list_iterator_name).is_some() {
+                params.get(list_iterator_name)
+            } else {
+                parent_params.get(&the_node_str)
+            };
+
             let list_data = match validate_loop_data(&node, data_retrieval) {
                 Ok(data) => data,
                 Err(e) => return Err(e),
@@ -110,8 +126,9 @@ pub fn generate_template(
             } else {
                 list_data.as_array().unwrap()
             };
-            for item in loop_over {
-                let value_to_string = match item.as_object() {
+
+            for (i, item) in loop_over.iter().enumerate() {
+                let item_to_mapping = match item.as_object() {
                     Some(data) => data,
                     None => {
                         return Err(format!(
@@ -120,15 +137,42 @@ pub fn generate_template(
                         ))
                     }
                 };
-                let mut new_map = HashMap::new();
+                let mut new_params = HashMap::new();
 
-                for (k, v) in value_to_string.iter() {
-                    new_map.insert(k.clone(), v.clone());
+                for (k, v) in item_to_mapping.iter() {
+                    new_params.insert(k.clone(), v.clone());
+                }
+
+                let key_data_from_params = params.get(list_iterator_name);
+                let mut clone_of_parent_params = parent_params.clone();
+                if let Some(key_data_from_params) = key_data_from_params {
+                    let x = key_data_from_params.as_object();
+                    let y = key_data_from_params.as_array();
+                    if let Some(x) = x {
+                        let item = x.get(list_iterator_name).unwrap();
+                        let the_item = item.get(i).unwrap();
+                        if !parent_params.contains_key(&variable_iterator_name) {
+                            clone_of_parent_params.remove(&variable_iterator_name);
+                        }
+                        clone_of_parent_params
+                            .insert(variable_iterator_name.clone(), the_item.clone());
+                    } else if let Some(y) = y {
+                        let the_item = y.get(i).unwrap();
+                        if !parent_params.contains_key(&variable_iterator_name) {
+                            clone_of_parent_params.remove(&variable_iterator_name);
+                        }
+                        clone_of_parent_params
+                            .insert(variable_iterator_name.clone(), the_item.clone());
+                    }
+                } else if parent_params.get(&variable_iterator_name).is_some() {
+                    clone_of_parent_params.remove(&variable_iterator_name);
+                    clone_of_parent_params.insert(variable_iterator_name.clone(), item.clone());
                 }
 
                 match generate_template(
                     node.children.clone().unwrap(),
-                    new_map.clone(),
+                    new_params,
+                    clone_of_parent_params,
                     open_loop_stack.clone(),
                 ) {
                     Ok(data) => html.push_str(data.as_str()),
@@ -147,13 +191,29 @@ pub fn generate_template(
                     Err(e) => return Err(e),
                 }
 
-                match validate_property(&node, &node_iterator_name, node_property_name, &params) {
+                match validate_property(
+                    &node,
+                    &node_iterator_name,
+                    node_property_name,
+                    &params,
+                    &parent_params,
+                ) {
                     Ok(()) => (),
                     Err(e) => return Err(e),
                 }
 
-                if let Ok(data) = generate_variable_data(node_property_name, &params) {
-                    html.push_str(&data)
+                if parent_params.contains_key(&node_iterator_name) {
+                    let the_data = parent_params.get(&node_iterator_name).unwrap().as_object();
+                    if let Some(the_data) = the_data {
+                        let mut new_map = HashMap::new();
+
+                        for (k, v) in the_data.iter() {
+                            new_map.insert(k.clone(), v.clone());
+                        }
+                        if let Ok(data) = generate_variable_data(node_property_name, &new_map) {
+                            html.push_str(&data)
+                        }
+                    }
                 }
             } else {
                 match generate_variable_data(&node_value_cleaned, &params) {
@@ -181,5 +241,5 @@ pub fn render_template(
     };
     let loop_stack: Vec<String> = vec![];
 
-    generate_template(ast, parameters, loop_stack)
+    generate_template(ast, parameters.clone(), parameters, loop_stack)
 }

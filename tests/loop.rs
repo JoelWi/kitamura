@@ -100,3 +100,172 @@ fn loop_data_not_an_object() {
     let rendered_html = render_template(html.to_string(), params);
     assert!(rendered_html.is_err());
 }
+
+#[test]
+fn nested_loops_referencing_the_same_dataset_holds_same_references() {
+    let html = "<html>
+{#for continent in continents#}
+    ${continent.name}
+    {#for country in continent.countries#}
+        ${country.name}
+        {#for city in country.cities#}
+            ${city.name}
+            {#for continent in continents#}
+                ${continent.name}
+                {#for country in continent.countries#}
+                    ${country.name}
+                    {#for city in country.cities#}
+                        ${city.name}
+                    {#endfor#}
+                {#endfor#}
+            {#endfor#}
+        {#endfor#}
+    {#endfor#}
+{#endfor#}
+</html>";
+    let mut params = HashMap::new();
+    params.insert(
+        "continents".to_string(),
+        json!({
+            "continents": [
+                {
+                    "name": "Oceania",
+                    "countries": [
+                        {
+                            "name": "Australia",
+                            "cities": [
+                                {
+                                    "name": "Brisbane",
+                                    "time": "9:26PM",
+                                    "tempurature": "14C"
+                                },
+                                {
+                                    "name": "Melbourne",
+                                    "time": "9:26PM",
+                                    "tempurature": "14C"
+                                },
+                                {
+                                    "name": "Adelaide",
+                                    "time": "8:56PM",
+                                    "tempurature": "15C"
+                                }
+                            ]
+                        },
+                        {
+                            "name": "New Zealand",
+                            "cities": [
+                                {
+                                    "name": "Wellington",
+                                    "time": "11:26PM",
+                                    "tempurature": "12C"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "name": "Europe",
+                    "countries": [
+                        {
+                            "name": "England",
+                            "cities": [
+                                {
+                                    "name": "Manchester",
+                                    "time": "12:26PM",
+                                    "tempurature": "16C"
+                                },
+                                {
+                                    "name": "London",
+                                    "time": "12:26PM",
+                                    "tempurature": "23C"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }),
+    );
+
+    let expected_output = "<html>
+    Oceania
+        Australia
+            Brisbane
+                Oceania
+                    Australia
+                        Brisbane
+                        Melbourne
+                        Adelaide
+                    New Zealand
+                        Wellington
+                Europe
+                    England
+                        Manchester
+                        London
+            Melbourne
+                Oceania
+                    Australia
+                        Brisbane
+                        Melbourne
+                        Adelaide
+                    New Zealand
+                        Wellington
+                Europe
+                    England
+                        Manchester
+                        London
+            Adelaide
+                Oceania
+                    Australia
+                        Brisbane
+                        Melbourne
+                        Adelaide
+                    New Zealand
+                        Wellington
+                Europe
+                    England
+                        Manchester
+                        London
+        New Zealand
+            Wellington
+                Oceania
+                    Australia
+                        Brisbane
+                        Melbourne
+                        Adelaide
+                    New Zealand
+                        Wellington
+                Europe
+                    England
+                        Manchester
+                        London
+    Europe
+        England
+            Manchester
+                Oceania
+                    Australia
+                        Brisbane
+                        Melbourne
+                        Adelaide
+                    New Zealand
+                        Wellington
+                Europe
+                    England
+                        Manchester
+                        London
+            London
+                Oceania
+                    Australia
+                        Brisbane
+                        Melbourne
+                        Adelaide
+                    New Zealand
+                        Wellington
+                Europe
+                    England
+                        Manchester
+                        London
+</html>";
+    let rendered_html = render_template(html.to_string(), params);
+    assert_eq!(rendered_html.unwrap(), expected_output);
+}
