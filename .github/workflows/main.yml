@@ -62,4 +62,6 @@ jobs:
         run: cargo tarpaulin --workspace
       - name: Coveralls GitHub Action
         uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ secrets.COVERALLS_REPO_TOKEN }}
             
