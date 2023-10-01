@@ -1,4 +1,7 @@
 # Kitamura 北村
+[![Actions](https://github.com/JoelWi/kitamura/actions/workflows/main.yml/badge.svg)](https://github.com/JoelWi/kitamura/actions/workflows/main.yml)
+[![Coverage Status](https://coveralls.io/repos/github/JoelWi/kitamura/badge.svg?branch=main)](https://coveralls.io/github/JoelWi/kitamura?branch=main)
+
 Kitamura is a templating engine for rendering templates based on placeholders
 defined in your templates. Placeholders are provided in the form of content parameters
 that are in JSON.
