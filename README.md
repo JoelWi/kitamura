@@ -1,4 +1,4 @@
-# Kitamura
+# Kitamura 北村
 Kitamura is an HTML templating engine for rendering HTML based on placeholders
 defined in your HTML. Placeholders are provided in the form of content parameters
 that are in JSON.
