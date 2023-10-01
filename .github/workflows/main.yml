@@ -60,3 +60,6 @@ jobs:
         run: cargo install cargo-tarpaulin
       - name: Generate code coverage
         run: cargo tarpaulin --workspace
+      - name: Coveralls GitHub Action
+        uses: coverallsapp/github-action@v2
+            
