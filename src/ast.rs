@@ -13,6 +13,8 @@ pub enum ASTNodeIdentifier {
     Loop,
     LoopEnd,
     NewLine,
+    If,
+    IfEnd,
 }
 
 #[derive(Debug, Clone)]
@@ -35,6 +37,11 @@ fn assign_identity(ast_node: &mut ASTNode) -> Result<(), String> {
                 ast_node.identifier = ASTNodeIdentifier::Loop;
                 ast_node.children = Some(Ast { nodes: vec![] });
             }
+            "{#if" => {
+                ast_node.identifier = ASTNodeIdentifier::If;
+                ast_node.children = Some(Ast { nodes: vec![] });
+            }
+            "{#endif#}" => ast_node.identifier = ASTNodeIdentifier::IfEnd,
             _ => {
                 let construct_token = ast_node.tokens.get(2).unwrap();
                 return Err(format!(
@@ -109,7 +116,9 @@ pub fn construct_ast(parsed_tokens: Vec<Vec<Token>>) -> Result<Ast, String> {
 
         if let Some(last_node) = last_node {
             if (ast_node.identifier == ASTNodeIdentifier::LoopEnd
-                || ast_node.identifier == ASTNodeIdentifier::Loop)
+                || ast_node.identifier == ASTNodeIdentifier::Loop
+                || ast_node.identifier == ASTNodeIdentifier::If
+                || ast_node.identifier == ASTNodeIdentifier::IfEnd)
                 && last_node.value.replace(' ', "").is_empty()
             {
                 constructed_ast.nodes.pop();
@@ -118,7 +127,9 @@ pub fn construct_ast(parsed_tokens: Vec<Vec<Token>>) -> Result<Ast, String> {
 
         match ast_node.identifier {
             ASTNodeIdentifier::NewLine => {
-                if constructed_ast.nodes.last().unwrap().identifier != ASTNodeIdentifier::LoopEnd {
+                let last_node = constructed_ast.nodes.last().unwrap().identifier.clone();
+                if last_node != ASTNodeIdentifier::LoopEnd && last_node != ASTNodeIdentifier::IfEnd
+                {
                     constructed_ast.nodes.push(ast_node);
                 }
             }
@@ -131,40 +142,73 @@ pub fn construct_ast(parsed_tokens: Vec<Vec<Token>>) -> Result<Ast, String> {
     // Naive iteration to move children nodes into parent
 
     let mut new_ast = Ast { nodes: vec![] };
-    let mut loop_node_vec: Vec<ASTNode> = vec![];
+    let mut nodes_with_children: Vec<ASTNode> = vec![];
 
     for node in constructed_ast.nodes {
         match node.identifier {
             ASTNodeIdentifier::Loop => {
-                loop_node_vec.push(node);
+                nodes_with_children.push(node);
             }
             ASTNodeIdentifier::LoopEnd => {
-                if loop_node_vec.len() > 1 {
-                    let length = loop_node_vec.len() - 1;
-                    let latest_node = loop_node_vec[length].clone();
+                if nodes_with_children.len() > 1 {
+                    let length = nodes_with_children.len() - 1;
+                    let latest_node = nodes_with_children[length].clone();
 
                     let length_of_next = length - 1;
-                    let latest_node_next =
-                        &mut loop_node_vec[length_of_next].children.as_mut().unwrap();
+                    let latest_node_next = &mut nodes_with_children[length_of_next]
+                        .children
+                        .as_mut()
+                        .unwrap();
                     latest_node_next.nodes.push(latest_node);
-                    loop_node_vec.pop();
+                    nodes_with_children.pop();
                 } else {
-                    new_ast.nodes.push(loop_node_vec.last().unwrap().clone());
-                    loop_node_vec.pop();
+                    new_ast
+                        .nodes
+                        .push(nodes_with_children.last().unwrap().clone());
+                    nodes_with_children.pop();
                 }
 
-                if !loop_node_vec.is_empty() {
-                    let length = loop_node_vec.len() - 1;
-                    let latest_node = &mut loop_node_vec[length].children.as_mut().unwrap();
+                if !nodes_with_children.is_empty() {
+                    let length = nodes_with_children.len() - 1;
+                    let latest_node = &mut nodes_with_children[length].children.as_mut().unwrap();
                     latest_node.nodes.push(node);
                 } else {
                     new_ast.nodes.push(node);
                 }
             }
+            ASTNodeIdentifier::If => nodes_with_children.push(node),
+            ASTNodeIdentifier::IfEnd => {
+                if nodes_with_children.len() > 1 {
+                    let length = nodes_with_children.len() - 1;
+                    let latest_node = nodes_with_children[length].clone();
+
+                    let length_of_next = length - 1;
+                    let latest_node_next = &mut nodes_with_children[length_of_next]
+                        .children
+                        .as_mut()
+                        .unwrap();
+                    latest_node_next.nodes.push(latest_node);
+                    nodes_with_children.pop();
+                } else {
+                    new_ast
+                        .nodes
+                        .push(nodes_with_children.last().unwrap().clone());
+                    nodes_with_children.pop();
+                }
+
+                if !nodes_with_children.is_empty() {
+                    let length = nodes_with_children.len() - 1;
+                    let latest_node = &mut nodes_with_children[length].children.as_mut().unwrap();
+                    latest_node.nodes.push(node);
+                } else {
+                    new_ast.nodes.push(node);
+                }
+            }
+
             ASTNodeIdentifier::NewLine => {
-                if !loop_node_vec.is_empty() {
-                    let length = loop_node_vec.len() - 1;
-                    let latest_node = &mut loop_node_vec[length].children.as_mut().unwrap();
+                if !nodes_with_children.is_empty() {
+                    let length = nodes_with_children.len() - 1;
+                    let latest_node = &mut nodes_with_children[length].children.as_mut().unwrap();
 
                     if new_ast.nodes.last().unwrap().identifier != ASTNodeIdentifier::NewLine
                         || !latest_node.nodes.is_empty()
@@ -176,9 +220,9 @@ pub fn construct_ast(parsed_tokens: Vec<Vec<Token>>) -> Result<Ast, String> {
                 }
             }
             _ => {
-                if !loop_node_vec.is_empty() {
-                    let length = loop_node_vec.len() - 1;
-                    let latest_node = &mut loop_node_vec[length].children.as_mut().unwrap();
+                if !nodes_with_children.is_empty() {
+                    let length = nodes_with_children.len() - 1;
+                    let latest_node = &mut nodes_with_children[length].children.as_mut().unwrap();
                     latest_node.nodes.push(node);
                 } else {
                     new_ast.nodes.push(node);
@@ -188,8 +232,8 @@ pub fn construct_ast(parsed_tokens: Vec<Vec<Token>>) -> Result<Ast, String> {
     }
 
     // Catch for any open loop control flows that weren't closed
-    if !loop_node_vec.is_empty() {
-        let last_node = loop_node_vec.last().unwrap();
+    if !nodes_with_children.is_empty() {
+        let last_node = nodes_with_children.last().unwrap();
         return Err(format!(
             "\n'{}' has no closing statement\nat line: {}:{}\n",
             last_node.value,
