@@ -1,8 +1,5 @@
 use std::collections::HashMap;
 
-
-
-
 #[test]
 fn condition_present_with_no_valid_param_provided() {
     let html = "Hello{#if first_name?? && first_name?not_empty#}${first_name}{#endif#}!".to_owned();
