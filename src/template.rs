@@ -221,6 +221,8 @@ pub fn generate_template(
                     Err(e) => return Err(e),
                 };
             }
+        } else if node.identifier == ASTNodeIdentifier::If || node.identifier == ASTNodeIdentifier::IfEnd {
+            //
         } else if node.identifier != ASTNodeIdentifier::LoopEnd {
             html.push_str(&node.value);
         }
