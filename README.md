@@ -30,6 +30,8 @@ Variables
 
 Lists
 
+Conditionals (coming soon!)
+
 # Examples
 ```
 use std::collections::HashMap;
