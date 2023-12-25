@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::{
     ast::{construct_ast, ASTNode, ASTNodeIdentifier, Ast},
@@ -68,6 +68,7 @@ fn generate_variable_data(
     params: &HashMap<String, serde_json::Value>,
 ) -> Result<String, String> {
     let variable = params.get(variable_key);
+    //println!("Var: {:?}", variable);
     match variable {
         Some(e) => Ok(serde_json::to_string(e).unwrap().replace('\"', "")),
         None => Err(format!(
@@ -181,6 +182,7 @@ pub fn generate_template(
             }
             open_loop_stack.pop();
         } else if node.identifier == ASTNodeIdentifier::Variable {
+            //println!("{:#?}", node);
             let node_value_cleaned = node.value.replace("${", "").replace('}', "");
             if node.value.contains('.') {
                 let node_iterator_name = node_value_cleaned.split('.').next().unwrap().to_string();
@@ -221,9 +223,87 @@ pub fn generate_template(
                     Err(e) => return Err(e),
                 };
             }
-        } else if node.identifier == ASTNodeIdentifier::If
-            || node.identifier == ASTNodeIdentifier::IfEnd
-        {
+        } else if node.identifier == ASTNodeIdentifier::If {
+            let contents = node.value[5..node.value.len() - 2].to_owned();
+            println!("{contents}");
+            let contents_split = contents.split_whitespace();
+            let operands = HashSet::from(["&&", "||"]);
+
+            let mut stack_ops: Vec<String> = vec![];
+            let mut valid_ops: Vec<bool> = vec![];
+
+            for item in contents_split.clone() {
+                if operands.contains(item) {
+                    stack_ops.push(item.to_owned());
+                }
+                if item.contains('?') {
+                    let item_split = item.split('?');
+                    let parameter_if = item.split('?').next().unwrap();
+                    let api = item_split.last().to_owned().unwrap();
+                    let valid_apis = HashSet::from(["exists", "not_empty"]);
+
+                    match valid_apis.contains(api) {
+                        true => println!("Real api"),
+                        false => println!("{api} is an illegal api."),
+                    }
+
+                    match api {
+                        "exists" => {
+                            println!("Check is present in map");
+                            let parameter: Option<String> = if params.get(parameter_if).is_some() {
+                                Some(params.get(parameter_if).unwrap().to_string())
+                            } else {
+                                None
+                            };
+
+                            match parameter {
+                                None => valid_ops.push(false),
+                                Some(_p) => valid_ops.push(true),
+                            }
+                        }
+                        "not_empty" => {
+                            println!("len > 0");
+                            let parameter: Option<String> = if params.get(parameter_if).is_some() {
+                                Some(params.get(parameter_if).unwrap().to_string())
+                            } else {
+                                None
+                            };
+
+                            match parameter {
+                                None => valid_ops.push(false),
+                                Some(p) => {
+                                    println!("was found: {}", p);
+                                    if p.len() > 2 {
+                                        println!("Len > 0 success");
+                                        valid_ops.push(true)
+                                    } else {
+                                        valid_ops.push(false)
+                                    }
+                                }
+                            }
+                        }
+                        _ => println!("Not valid api but this won't hit"),
+                    }
+                }
+            }
+
+            println!("{:?} | {:?}", valid_ops, stack_ops);
+            if valid_ops[0] && valid_ops[1] && stack_ops[0] == *"&&" {
+                println!("Condition is valid");
+                valid_ops.remove(0);
+                valid_ops.remove(0);
+                stack_ops.remove(0);
+                match generate_template(
+                    node.children.clone().unwrap(),
+                    params.clone(),
+                    parent_params.clone(),
+                    open_loop_stack.clone(),
+                ) {
+                    Ok(data) => html.push_str(data.as_str()),
+                    Err(e) => return Err(e),
+                }
+            }
+        } else if node.identifier == ASTNodeIdentifier::IfEnd {
             //
         } else if node.identifier != ASTNodeIdentifier::LoopEnd {
             html.push_str(&node.value);
