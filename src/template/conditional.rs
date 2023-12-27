@@ -1,8 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet},
-};
-
-
+use std::collections::{HashMap, HashSet};
 
 use crate::{ast::ASTNode, template::generate_template};
 
@@ -65,7 +61,15 @@ fn evaluate_condition_ops(
     }
 }
 
-fn validate_condition(node: &ASTNode, open_loop_stack: &[String], contents_split: &Vec<String>, stack_ops: &mut Vec<String>, valid_ops: &mut Vec<bool>, params: &HashMap<String, serde_json::Value>, parent_params: &HashMap<String, serde_json::Value>) -> Result<String, String> {
+fn validate_condition(
+    node: &ASTNode,
+    open_loop_stack: &[String],
+    contents_split: &Vec<String>,
+    stack_ops: &mut Vec<String>,
+    valid_ops: &mut Vec<bool>,
+    params: &HashMap<String, serde_json::Value>,
+    parent_params: &HashMap<String, serde_json::Value>,
+) -> Result<String, String> {
     match contents_split.len() {
         3 => {
             if valid_ops[0] && valid_ops[1] && stack_ops[0] == *"&&" {
@@ -103,7 +107,6 @@ fn validate_condition(node: &ASTNode, open_loop_stack: &[String], contents_split
         }
         _ => Err("Invalid arguments".to_owned()),
     }
-
 }
 
 pub fn evaluate_condition(
@@ -117,7 +120,21 @@ pub fn evaluate_condition(
     let mut stack_ops: Vec<String> = vec![];
     let mut valid_ops: Vec<bool> = vec![];
 
-    evaluate_condition_ops(&contents_split, &mut stack_ops, &mut valid_ops, &params, &parent_params);
+    evaluate_condition_ops(
+        &contents_split,
+        &mut stack_ops,
+        &mut valid_ops,
+        &params,
+        &parent_params,
+    );
 
-    validate_condition(node, open_loop_stack, &contents_split, &mut stack_ops, &mut valid_ops, &params, &parent_params)
+    validate_condition(
+        node,
+        open_loop_stack,
+        &contents_split,
+        &mut stack_ops,
+        &mut valid_ops,
+        &params,
+        &parent_params,
+    )
 }

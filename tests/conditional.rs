@@ -78,9 +78,7 @@ fn combination_of_present_missing_not_empty_empty() {
 }
 #[test]
 fn invalid_data_inside_one_condition_only() {
-    let html =
-        "Hello{#if first_name?exists#} ${this_isnt_provided}{#endif#}!"
-            .to_owned();
+    let html = "Hello{#if first_name?exists#} ${this_isnt_provided}{#endif#}!".to_owned();
     let params = HashMap::from([("first_name".to_owned(), serde_json::json!("Joel"))]);
 
     let rendered_html = kitamura::render_template(html.clone(), params);
@@ -109,5 +107,3 @@ fn invalid_amount_of_args() {
 
     assert!(rendered_html.is_err());
 }
-
-
