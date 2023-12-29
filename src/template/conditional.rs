@@ -1,8 +1,8 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use crate::{ast::ASTNode, template::generate_template};
 
-fn conditional_contents(raw_condition_string: &String) -> Vec<String> {
+fn conditional_contents(raw_condition_string: &str) -> Vec<String> {
     raw_condition_string
         .split_whitespace()
         .map(|s| s.to_owned())
@@ -14,12 +14,12 @@ fn evaluate_condition_ops(
     evaluations: &mut Vec<EvalOp>,
     params: &HashMap<String, serde_json::Value>,
     _parent_params: &HashMap<String, serde_json::Value>,
-) {
+) -> Result<(), String> {
     for item in contents_split {
         if item == "&&" {
-            evaluations.push(EvalOp::ANDOP);
+            evaluations.push(EvalOp::AndOp);
         } else if item == "||" {
-            evaluations.push(EvalOp::OROP);
+            evaluations.push(EvalOp::OrOp);
         } else if item.contains('?') {
             let item_split = item.split('?');
             let parameter_if = item.split('?').next().unwrap();
@@ -34,8 +34,8 @@ fn evaluate_condition_ops(
                     };
 
                     match parameter {
-                        None => evaluations.push(EvalOp::FALSE),
-                        Some(_p) => evaluations.push(EvalOp::TRUE),
+                        None => evaluations.push(EvalOp::False),
+                        Some(_p) => evaluations.push(EvalOp::True),
                     }
                 }
                 "not_empty" => {
@@ -46,28 +46,30 @@ fn evaluate_condition_ops(
                     };
 
                     match parameter {
-                        None => evaluations.push(EvalOp::FALSE),
+                        None => evaluations.push(EvalOp::False),
                         Some(p) => {
                             if p.len() > 2 {
-                                evaluations.push(EvalOp::TRUE)
+                                evaluations.push(EvalOp::True)
                             } else {
-                                evaluations.push(EvalOp::FALSE)
+                                evaluations.push(EvalOp::False)
                             }
                         }
                     }
                 }
-                _ => println!("Not valid api but this won't hit once this moves to the parser"),
+                _ => return Err(format!("Not valid api: {}", api)),
             }
         }
     }
+
+    Ok(())
 }
 
 #[derive(Clone, Debug, PartialEq)]
 enum EvalOp {
-    TRUE,
-    FALSE,
-    ANDOP,
-    OROP,
+    True,
+    False,
+    AndOp,
+    OrOp,
 }
 
 #[derive(Debug)]
@@ -82,13 +84,55 @@ fn split_up_groups(condition_content: &str) -> Vec<GroupNode> {
 
     let mut inner_groupings = 0;
 
+    //let mut prev_char = ' ';
     for char in condition_content.chars() {
         match char {
+            //'&' => {
+            //    if prev_char == '&' {
+            //        if grouping.len() > 0 {
+            //            groupings.push(GroupNode {
+            //                value: grouping[0..grouping.len() - 1].to_owned(),
+            //                children: None,
+            //            });
+            //        }
+
+            //      groupings.push(GroupNode {
+            //          value: "&&".to_owned(),
+            //          children: None,
+            //      });
+
+            //    prev_char = char::from(' ');
+            //    grouping = String::from("");
+            // } else {
+            //     prev_char = char;
+            //}
+            //}
+            //'|' => {
+            //    if prev_char == '|' {
+            //        println!("Length of grouping: {}", grouping.len());
+            //        if grouping.len() > 0 {
+            //            groupings.push(GroupNode {
+            //                value: grouping[0..grouping.len() - 1].to_owned(),
+            //                children: None,
+            //            });
+            //        }
+
+            //        groupings.push(GroupNode {
+            //            value: "||".to_owned(),
+            //            children: None,
+            //        });
+
+            //        prev_char = char::from(' ');
+            //        grouping = String::from("");
+            //    } else {
+            //        prev_char = char;
+            //    }
+            // }
             '(' => {
                 if inner_groupings > 0 {
                     grouping.push(char);
                 }
-                if grouping.len() > 0 && inner_groupings == 0 {
+                if !grouping.is_empty() && inner_groupings == 0 {
                     groupings.push(GroupNode {
                         value: grouping,
                         children: None,
@@ -99,49 +143,29 @@ fn split_up_groups(condition_content: &str) -> Vec<GroupNode> {
                 inner_groupings += 1;
             }
             ')' => {
-                //if inner_groupings == 1 {
-                //    inner_groupings -= 1;
-                //    if grouping.len() > 0 {
-                //       groupings.push(GroupNode {
-                //            value: grouping,
-                //            children: None,
-                //        });
-                //        grouping = String::from("");
-                //    }
                 if inner_groupings > 1 {
                     grouping.push(char);
                     inner_groupings -= 1;
-                    //if grouping.len() > 0 {
-                    //    groupings.push(GroupNode {
-                    //        value: grouping.clone(),
-                    //        children: Some(split_up_groups(&grouping)),
-                    //    });
-                    //    grouping = String::from("");
-                    // }
-                } else {
-                    if grouping.len() > 0 {
-                        if grouping.contains('(') {
-                            //println!("time to push to children");
-                            groupings.push(GroupNode {
-                                value: grouping.clone(),
-                                children: Some(split_up_groups(&grouping)),
-                            });
-                            grouping = String::from("");
-                            inner_groupings = 0;
-                        } else {
-                            //println!("time to push to top level");
-                            groupings.push(GroupNode {
-                                value: grouping,
-                                children: None,
-                            });
-                            grouping = String::from("");
-                            inner_groupings = 0;
-                        }
+                } else if !grouping.is_empty() {
+                    if grouping.contains('(') {
+                        groupings.push(GroupNode {
+                            value: grouping.clone(),
+                            children: Some(split_up_groups(&grouping)),
+                        });
+                        grouping = String::from("");
+                        inner_groupings = 0;
+                    } else {
+                        groupings.push(GroupNode {
+                            value: grouping,
+                            children: None,
+                        });
+                        grouping = String::from("");
+                        inner_groupings = 0;
                     }
                 }
             }
             ' ' => {
-                if grouping.len() > 0 {
+                if !grouping.is_empty() {
                     grouping.push(char);
                 }
             }
@@ -149,104 +173,124 @@ fn split_up_groups(condition_content: &str) -> Vec<GroupNode> {
         }
     }
 
-    if grouping.len() > 0 && inner_groupings == 0 {
+    if !grouping.is_empty() && inner_groupings == 0 {
         groupings.push(GroupNode {
             value: grouping.clone(),
             children: None,
         });
     }
 
-    println!("grouping that is left: {}", grouping);
-    return groupings;
+    groupings
 }
 
-fn final_evaluations(evaluations: Vec<EvalOp>) -> bool {
-    let mut prev = EvalOp::FALSE;
+fn final_evaluations(evaluations: Vec<EvalOp>) -> EvalOp {
+    let mut prev = EvalOp::False;
     for (i, eval) in evaluations.clone().into_iter().enumerate() {
         match eval {
-            EvalOp::FALSE => {
+            EvalOp::False => {
                 if i >= 2 {
                     let prev_prev = evaluations.get(i - 2).unwrap();
-                    if prev == EvalOp::OROP && *prev_prev == EvalOp::FALSE {
-                        return false;
-                    } else if prev == EvalOp::ANDOP
-                        && (*prev_prev == EvalOp::TRUE || *prev_prev == EvalOp::FALSE)
+                    if (prev == EvalOp::OrOp && *prev_prev == EvalOp::False)
+                        || (prev == EvalOp::AndOp
+                            && (*prev_prev == EvalOp::True || *prev_prev == EvalOp::False))
                     {
-                        return false;
+                        return EvalOp::False;
                     }
                 }
 
-                if i == evaluations.len() {
-                    return false;
+                if i == evaluations.len() - 1 && i == 0 {
+                    return EvalOp::False;
                 }
             }
             _ => prev = eval,
         }
     }
 
-    true
+    EvalOp::True
 }
 
 fn evaluate_groupings(
     group_split: &Vec<GroupNode>,
     params: &HashMap<String, serde_json::Value>,
     parent_params: &HashMap<String, serde_json::Value>,
-) -> Vec<EvalOp> {
+) -> Result<Vec<EvalOp>, String> {
     let mut evaluations = vec![];
     for group_node in group_split {
         if group_node.children.is_some() {
-            //println!("Inside child grouping");
-            let nested_evaluations = evaluate_groupings(
-                &group_node.children.as_ref().unwrap(),
-                params,
-                parent_params,
-            );
+            let nested_evaluations =
+                evaluate_groupings(group_node.children.as_ref().unwrap(), params, parent_params)?;
+
             let res = final_evaluations(nested_evaluations);
-            //println!("nested eval: {}", res);
-            if res {
-                evaluations.push(EvalOp::TRUE);
-            } else {
-                evaluations.push(EvalOp::FALSE);
-            }
+            evaluations.push(res);
         } else {
-            //println!("inside top level grouping");
-            let contents_split =
-                conditional_contents(&group_node.value.replace("(", "").replace(")", ""));
+            let contents_split = conditional_contents(&group_node.value.replace(['(', ')'], ""));
 
             match &contents_split[0][0..] {
-                "&&" => evaluations.push(EvalOp::ANDOP),
-                "||" => evaluations.push(EvalOp::OROP),
+                "&&" => {
+                    if contents_split.len() == 1 {
+                        evaluations.push(EvalOp::AndOp)
+                    }
+                }
+                "||" => {
+                    if contents_split.len() == 1 {
+                        evaluations.push(EvalOp::OrOp)
+                    }
+                }
                 _ => {
-                    let mut node_evauations = vec![];
+                    let mut node_evaluations = vec![];
 
                     evaluate_condition_ops(
                         &contents_split,
-                        &mut node_evauations,
-                        &params,
-                        &parent_params,
-                    );
+                        &mut node_evaluations,
+                        params,
+                        parent_params,
+                    )?;
 
-                    println!("{:?}", contents_split);
-                    println!("{:?}", node_evauations);
-                    let res = final_evaluations(node_evauations);
-                    println!("nested eval: {}", res);
-                    match res {
-                        true => evaluations.push(EvalOp::TRUE),
-                        false => evaluations.push(EvalOp::FALSE),
-                    };
+                    let last_node = node_evaluations.last().unwrap();
+                    //let first_node = node_evaluations.first().unwrap();
+
+                    // Do I need this?/
+                    //if *first_node == EvalOp::AndOp || *first_node == EvalOp::OrOp {
+                    //    let res = final_evaluations(node_evaluations[1..].to_vec());
+                    //    println!("nested eval INSIDE FIRST: {:?}", res);
+                    //    evaluations.push(first_node.clone());
+                    //    match res {
+                    //        EvalOp::True => evaluations.push(EvalOp::True),
+                    //        _ => evaluations.push(EvalOp::False),
+                    //EvalOp::AndOp => evaluations.push(EvalOp::AndOp),
+                    //EvalOp::OrOp => evaluations.push(EvalOp::OrOp),
+                    //    };
+                    if *last_node == EvalOp::AndOp || *last_node == EvalOp::OrOp {
+                        let res = final_evaluations(
+                            node_evaluations[0..node_evaluations.len() - 1].to_vec(),
+                        );
+                        match res {
+                            EvalOp::True => evaluations.push(EvalOp::True),
+                            _ => evaluations.push(EvalOp::False),
+                            //EvalOp::AndOp => evaluations.push(EvalOp::AndOp),
+                            //EvalOp::OrOp => evaluations.push(EvalOp::OrOp),
+                        };
+                        evaluations.push(last_node.clone());
+                    } else {
+                        let res = final_evaluations(node_evaluations);
+                        match res {
+                            EvalOp::True => evaluations.push(EvalOp::True),
+                            _ => evaluations.push(EvalOp::False),
+                            //EvalOp::AndOp => evaluations.push(EvalOp::AndOp),
+                            //EvalOp::OrOp => evaluations.push(EvalOp::OrOp),
+                        };
+                    }
                 }
             }
         };
     }
 
-    if evaluations.len() == 0 {
-        evaluations.push(EvalOp::FALSE);
-    }
+    // Do I need  this?
+    //if evaluations.is_empty() {
+    //    evaluations.push(EvalOp::False);
+    //}
 
-    println!("final evals being returned:");
-    println!("{:?}", evaluations);
-
-    evaluations
+    Ok(evaluations)
 }
 
 pub fn evaluate_condition(
@@ -256,17 +300,21 @@ pub fn evaluate_condition(
     open_loop_stack: &[String],
 ) -> Result<String, String> {
     let group_split = split_up_groups(&node.value[4..node.value.len() - 2]);
-    println!("{:#?}", group_split);
 
-    let evaluations = evaluate_groupings(&group_split, &params, &parent_params);
-    println!("final eval after all groupings:");
-    println!("{:?}", evaluations);
+    let evaluations = evaluate_groupings(&group_split, &params, &parent_params)?;
+
+    let last_node = evaluations.last().unwrap();
+    if evaluations.len() == 2 && (*last_node == EvalOp::AndOp || *last_node == EvalOp::OrOp) {
+        return Err(format!(
+            "Incorrect amount of arguments, nothing of right side of : {:?}",
+            last_node
+        ));
+    }
 
     let can_we_enter_the_inner_content = final_evaluations(evaluations);
 
     match can_we_enter_the_inner_content {
-        false => Ok("".to_owned()),
-        true => {
+        EvalOp::True => {
             match generate_template(
                 node.children.clone().unwrap(),
                 params.clone(),
@@ -277,5 +325,6 @@ pub fn evaluate_condition(
                 Err(e) => Err(e),
             }
         }
+        _ => Ok("".to_owned()),
     }
 }
