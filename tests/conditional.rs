@@ -2,7 +2,8 @@ use std::collections::HashMap;
 
 #[test]
 fn condition_present_with_no_valid_param_provided() {
-    let html = "Hello{#if first_name?? && first_name?not_empty#}${first_name}{#endif#}!".to_owned();
+    let html =
+        "Hello{#if first_name?exists && first_name?not_empty#}${first_name}{#endif#}!".to_owned();
     let mut params = HashMap::new();
 
     params.insert("first_name".to_owned(), serde_json::json!({}));
@@ -14,7 +15,7 @@ fn condition_present_with_no_valid_param_provided() {
 
 #[test]
 fn nested_condition_present_with_no_valid_param_provided() {
-    let html = "Hello{#if first_name?? && first_name?not_empty#}${first_name}{#if last_name?? && last_name?not_empty#}${last_name}{#endif#}{#endif#}!".to_owned();
+    let html = "Hello{#if first_name?exists && first_name?not_empty#}${first_name}{#if last_name?exists && last_name?not_empty#}${last_name}{#endif#}{#endif#}!".to_owned();
     let mut params = HashMap::new();
 
     params.insert("first_name".to_owned(), serde_json::json!({}));
@@ -76,6 +77,7 @@ fn combination_of_present_missing_not_empty_empty() {
         .replace('\n', "");
     assert_eq!(rendered_html, expected_output);
 }
+
 #[test]
 fn invalid_data_inside_one_condition_only() {
     let html = "Hello{#if first_name?exists#} ${this_isnt_provided}{#endif#}!".to_owned();
@@ -98,7 +100,7 @@ fn invalid_data_inside_condition() {
 
 #[test]
 fn invalid_amount_of_args() {
-    let html = "Hello{#if first_name?? &&#}${first_name}{#endif#}!".to_owned();
+    let html = "Hello{#if first_name?exists &&#} ${first_name}{#endif#}!".to_owned();
     let mut params = HashMap::new();
 
     params.insert("first_name".to_owned(), serde_json::json!({}));
@@ -106,4 +108,91 @@ fn invalid_amount_of_args() {
     let rendered_html = kitamura::render_template(html, params);
 
     assert!(rendered_html.is_err());
+}
+
+#[test]
+fn invalid_api_provided() {
+    let html = "Hello{#if first_name?this_is_not_valid_api#} ${first_name}{#endif#}!".to_owned();
+    let mut params = HashMap::new();
+
+    params.insert("first_name".to_owned(), serde_json::json!({}));
+
+    let rendered_html = kitamura::render_template(html, params);
+
+    assert!(rendered_html.is_err());
+}
+
+// Random groupings to assert I didn't stuff this up
+#[test]
+fn grouping_a() {
+    let html = "Hello{#if ((first_name?exists && first_name?not_empty) && ((first_name?exists) && ((first_name?exists && first_name?not_empty && (last_name?exists))))) || (last_name?exists && last_name?not_empty)#} ${first_name}{#endif#}!".to_owned();
+    let params = HashMap::from([("first_name".to_owned(), serde_json::json!("Joel"))]);
+
+    let expected_output = "Hello!".to_owned();
+    let rendered_html = kitamura::render_template(html.clone(), params)
+        .unwrap()
+        .replace('\n', "");
+    assert_eq!(rendered_html, expected_output);
+}
+
+#[test]
+fn grouping_b() {
+    let html = "Hello{#if ((first_name?exists && first_name?not_empty) && ((first_name?exists) && ((first_name?exists && first_name?not_empty || (last_name?exists))))) || (last_name?exists && last_name?not_empty)#} ${first_name}{#endif#}!".to_owned();
+    let params = HashMap::from([("first_name".to_owned(), serde_json::json!("Joel"))]);
+
+    let expected_output = "Hello Joel!".to_owned();
+    let rendered_html = kitamura::render_template(html.clone(), params)
+        .unwrap()
+        .replace('\n', "");
+    assert_eq!(rendered_html, expected_output);
+}
+
+#[test]
+fn grouping_c() {
+    let html = "Hello{#if first_name?exists && first_name?not_empty || ((last_name?exists))#} ${first_name}{#endif#}!".to_owned();
+    let params = HashMap::from([("first_name".to_owned(), serde_json::json!("Joel"))]);
+
+    let expected_output = "Hello Joel!".to_owned();
+    let rendered_html = kitamura::render_template(html.clone(), params)
+        .unwrap()
+        .replace('\n', "");
+    assert_eq!(rendered_html, expected_output);
+}
+
+#[test]
+fn grouping_d() {
+    let html = "Hello{#if ((first_name?exists && first_name?not_empty) || (first_name?exists || last_name?exists)) || last_name?exists #} ${first_name}{#endif#}!".to_owned();
+    let params = HashMap::from([("first_name".to_owned(), serde_json::json!("Joel"))]);
+
+    let expected_output = "Hello Joel!".to_owned();
+    let rendered_html = kitamura::render_template(html.clone(), params)
+        .unwrap()
+        .replace('\n', "");
+    assert_eq!(rendered_html, expected_output);
+}
+
+#[test]
+fn grouping_e() {
+    let html =
+        "Hello{#if last_name?exists && (last_name?exists)#} ${first_name}{#endif#}!".to_owned();
+    let params = HashMap::from([("first_name".to_owned(), serde_json::json!("Joel"))]);
+
+    let expected_output = "Hello!".to_owned();
+    let rendered_html = kitamura::render_template(html.clone(), params)
+        .unwrap()
+        .replace('\n', "");
+    assert_eq!(rendered_html, expected_output);
+}
+
+#[test]
+fn grouping_f() {
+    let html =
+        "Hello{#if (first_name?exists) && (first_name?exists)#} ${first_name}{#endif#}!".to_owned();
+    let params = HashMap::from([("first_name".to_owned(), serde_json::json!("Joel"))]);
+
+    let expected_output = "Hello Joel!".to_owned();
+    let rendered_html = kitamura::render_template(html.clone(), params)
+        .unwrap()
+        .replace('\n', "");
+    assert_eq!(rendered_html, expected_output);
 }
