@@ -1,6 +1,10 @@
 use std::collections::HashMap;
 
-use crate::{ast::ASTNode, template::generate_template};
+use crate::{
+    ast::ASTNode,
+    error::{Error, TemplateResult},
+    template::generate_template,
+};
 
 fn conditional_contents(raw_condition_string: &str) -> Vec<String> {
     raw_condition_string
@@ -14,7 +18,7 @@ fn evaluate_condition_ops(
     evaluations: &mut Vec<EvalOp>,
     params: &HashMap<String, serde_json::Value>,
     _parent_params: &HashMap<String, serde_json::Value>,
-) -> Result<(), String> {
+) -> Result<(), Error> {
     for item in contents_split {
         if item == "&&" {
             evaluations.push(EvalOp::AndOp);
@@ -56,7 +60,7 @@ fn evaluate_condition_ops(
                         }
                     }
                 }
-                _ => return Err(format!("Not valid api: {}", api)),
+                _ => return Err(Error::InvalidApi(format!("Not valid api: {}", api))),
             }
         }
     }
@@ -84,50 +88,8 @@ fn split_up_groups(condition_content: &str) -> Vec<GroupNode> {
 
     let mut inner_groupings = 0;
 
-    //let mut prev_char = ' ';
     for char in condition_content.chars() {
         match char {
-            //'&' => {
-            //    if prev_char == '&' {
-            //        if grouping.len() > 0 {
-            //            groupings.push(GroupNode {
-            //                value: grouping[0..grouping.len() - 1].to_owned(),
-            //                children: None,
-            //            });
-            //        }
-
-            //      groupings.push(GroupNode {
-            //          value: "&&".to_owned(),
-            //          children: None,
-            //      });
-
-            //    prev_char = char::from(' ');
-            //    grouping = String::from("");
-            // } else {
-            //     prev_char = char;
-            //}
-            //}
-            //'|' => {
-            //    if prev_char == '|' {
-            //        println!("Length of grouping: {}", grouping.len());
-            //        if grouping.len() > 0 {
-            //            groupings.push(GroupNode {
-            //                value: grouping[0..grouping.len() - 1].to_owned(),
-            //                children: None,
-            //            });
-            //        }
-
-            //        groupings.push(GroupNode {
-            //            value: "||".to_owned(),
-            //            children: None,
-            //        });
-
-            //        prev_char = char::from(' ');
-            //        grouping = String::from("");
-            //    } else {
-            //        prev_char = char;
-            //    }
-            // }
             '(' => {
                 if inner_groupings > 0 {
                     grouping.push(char);
@@ -213,7 +175,7 @@ fn evaluate_groupings(
     group_split: &Vec<GroupNode>,
     params: &HashMap<String, serde_json::Value>,
     parent_params: &HashMap<String, serde_json::Value>,
-) -> Result<Vec<EvalOp>, String> {
+) -> Result<Vec<EvalOp>, Error> {
     let mut evaluations = vec![];
     for group_node in group_split {
         if group_node.children.is_some() {
@@ -247,19 +209,7 @@ fn evaluate_groupings(
                     )?;
 
                     let last_node = node_evaluations.last().unwrap();
-                    //let first_node = node_evaluations.first().unwrap();
 
-                    // Do I need this?/
-                    //if *first_node == EvalOp::AndOp || *first_node == EvalOp::OrOp {
-                    //    let res = final_evaluations(node_evaluations[1..].to_vec());
-                    //    println!("nested eval INSIDE FIRST: {:?}", res);
-                    //    evaluations.push(first_node.clone());
-                    //    match res {
-                    //        EvalOp::True => evaluations.push(EvalOp::True),
-                    //        _ => evaluations.push(EvalOp::False),
-                    //EvalOp::AndOp => evaluations.push(EvalOp::AndOp),
-                    //EvalOp::OrOp => evaluations.push(EvalOp::OrOp),
-                    //    };
                     if *last_node == EvalOp::AndOp || *last_node == EvalOp::OrOp {
                         let res = final_evaluations(
                             node_evaluations[0..node_evaluations.len() - 1].to_vec(),
@@ -267,8 +217,6 @@ fn evaluate_groupings(
                         match res {
                             EvalOp::True => evaluations.push(EvalOp::True),
                             _ => evaluations.push(EvalOp::False),
-                            //EvalOp::AndOp => evaluations.push(EvalOp::AndOp),
-                            //EvalOp::OrOp => evaluations.push(EvalOp::OrOp),
                         };
                         evaluations.push(last_node.clone());
                     } else {
@@ -276,19 +224,12 @@ fn evaluate_groupings(
                         match res {
                             EvalOp::True => evaluations.push(EvalOp::True),
                             _ => evaluations.push(EvalOp::False),
-                            //EvalOp::AndOp => evaluations.push(EvalOp::AndOp),
-                            //EvalOp::OrOp => evaluations.push(EvalOp::OrOp),
                         };
                     }
                 }
             }
         };
     }
-
-    // Do I need  this?
-    //if evaluations.is_empty() {
-    //    evaluations.push(EvalOp::False);
-    //}
 
     Ok(evaluations)
 }
@@ -298,17 +239,17 @@ pub fn evaluate_condition(
     params: HashMap<String, serde_json::Value>,
     parent_params: HashMap<String, serde_json::Value>,
     open_loop_stack: &[String],
-) -> Result<String, String> {
+) -> TemplateResult {
     let group_split = split_up_groups(&node.value[4..node.value.len() - 2]);
 
     let evaluations = evaluate_groupings(&group_split, &params, &parent_params)?;
 
     let last_node = evaluations.last().unwrap();
     if evaluations.len() == 2 && (*last_node == EvalOp::AndOp || *last_node == EvalOp::OrOp) {
-        return Err(format!(
+        return Err(Error::InvalidSyntax(format!(
             "Incorrect amount of arguments, nothing of right side of : {:?}",
             last_node
-        ));
+        )));
     }
 
     let can_we_enter_the_inner_content = final_evaluations(evaluations);

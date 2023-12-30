@@ -1,4 +1,7 @@
-use crate::token::{Identifier, Token};
+use crate::{
+    error::Error,
+    token::{Identifier, Token},
+};
 
 #[derive(Debug, Default, Clone)]
 pub struct Ast {
@@ -25,7 +28,7 @@ pub struct ASTNode {
     pub children: Option<Ast>,
 }
 
-fn assign_identity(ast_node: &mut ASTNode) -> Result<(), String> {
+fn assign_identity(ast_node: &mut ASTNode) -> Result<(), Error> {
     let opening_chars = &ast_node.value[0..2];
     if opening_chars == "${" && ast_node.value.ends_with('}') {
         ast_node.identifier = ASTNodeIdentifier::Variable;
@@ -44,20 +47,20 @@ fn assign_identity(ast_node: &mut ASTNode) -> Result<(), String> {
             "{#endif#}" => ast_node.identifier = ASTNodeIdentifier::IfEnd,
             _ => {
                 let construct_token = ast_node.tokens.get(2).unwrap();
-                return Err(format!(
+                return Err(Error::InvalidSyntax(format!(
                     "\nUnknown construct: {} at line {}:{}\n{}{}\n",
                     ast_node.value,
                     construct_token.line_start,
                     construct_token.pos_start,
                     " ".to_string().repeat(21),
                     "^".to_string().repeat(control_flow.len() - 2),
-                ));
+                )));
             }
         }
     };
     Ok(())
 }
-pub fn construct_ast(parsed_tokens: Vec<Vec<Token>>) -> Result<Ast, String> {
+pub fn construct_ast(parsed_tokens: Vec<Vec<Token>>) -> Result<Ast, Error> {
     let mut open_brace_count = 0;
     let mut constructed_ast = Ast { nodes: vec![] };
 
@@ -95,20 +98,17 @@ pub fn construct_ast(parsed_tokens: Vec<Vec<Token>>) -> Result<Ast, String> {
 
         // Can add other stuff here when it comes e.g. conditions
         if ast_node.value.len() > 2 {
-            match assign_identity(&mut ast_node) {
-                Ok(()) => {}
-                Err(e) => return Err(e),
-            }
+            assign_identity(&mut ast_node)?;
         }
 
         // Variable error handling
         if open_brace_count > 1 {
-            return Err(format!(
+            return Err(Error::InvalidSyntax(format!(
                 "Error: Extra opening {{ found at line: {} position: {} in {}",
                 bad_token.line_start,
                 bad_token.pos_start - 1,
                 ast_node.value
-            ));
+            )));
         }
 
         // Sanitise whitespace only tokens good idea?
@@ -234,12 +234,12 @@ pub fn construct_ast(parsed_tokens: Vec<Vec<Token>>) -> Result<Ast, String> {
     // Catch for any open loop control flows that weren't closed
     if !nodes_with_children.is_empty() {
         let last_node = nodes_with_children.last().unwrap();
-        return Err(format!(
+        return Err(Error::InvalidSyntax(format!(
             "\n'{}' has no closing statement\nat line: {}:{}\n",
             last_node.value,
             last_node.tokens.first().unwrap().line_start,
             last_node.tokens.first().unwrap().pos_start
-        ));
+        )));
     }
 
     Ok(new_ast)

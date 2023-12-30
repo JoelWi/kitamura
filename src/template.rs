@@ -4,6 +4,7 @@ mod conditional;
 
 use crate::{
     ast::{construct_ast, ASTNode, ASTNodeIdentifier, Ast},
+    error::{Error, TemplateResult},
     token::{generate_tokens, parse_tokens},
 };
 
@@ -85,7 +86,7 @@ pub fn generate_template(
     params: HashMap<String, serde_json::Value>,
     parent_params: HashMap<String, serde_json::Value>,
     loop_stack: Vec<String>,
-) -> Result<String, String> {
+) -> TemplateResult {
     let mut html = String::new();
     let mut open_loop_stack: Vec<String> = loop_stack;
 
@@ -118,7 +119,7 @@ pub fn generate_template(
 
             let list_data = match validate_loop_data(&node, data_retrieval) {
                 Ok(data) => data,
-                Err(e) => return Err(e),
+                Err(e) => return Err(Error::InvalidSyntax(e)),
             };
 
             let list_data_with_key_name = &list_data[&list_iterator_name].as_array();
@@ -134,10 +135,10 @@ pub fn generate_template(
                 let item_to_mapping = match item.as_object() {
                     Some(data) => data,
                     None => {
-                        return Err(format!(
+                        return Err(Error::InvalidSyntax(format!(
                             "Data was not contained inside of an object for list: {}",
                             list_iterator_name
-                        ))
+                        )))
                     }
                 };
                 let mut new_params = HashMap::new();
@@ -192,7 +193,7 @@ pub fn generate_template(
 
                 match validate_iterator(&node, &node_iterator_name, &open_loop_stack) {
                     Ok(()) => (),
-                    Err(e) => return Err(e),
+                    Err(e) => return Err(Error::InvalidSyntax(e)),
                 }
 
                 match validate_property(
@@ -203,7 +204,7 @@ pub fn generate_template(
                     &parent_params,
                 ) {
                     Ok(()) => (),
-                    Err(e) => return Err(e),
+                    Err(e) => return Err(Error::InvalidSyntax(e)),
                 }
 
                 if parent_params.contains_key(&node_iterator_name) {
@@ -222,7 +223,7 @@ pub fn generate_template(
             } else {
                 match generate_variable_data(&node_value_cleaned, &params) {
                     Ok(data) => html.push_str(&data),
-                    Err(e) => return Err(e),
+                    Err(e) => return Err(Error::InvalidSyntax(e)),
                 };
             }
         } else if node.identifier == ASTNodeIdentifier::If {
@@ -247,13 +248,10 @@ pub fn generate_template(
 pub fn render_template(
     template_html: String,
     parameters: HashMap<String, serde_json::Value>,
-) -> Result<String, String> {
+) -> TemplateResult {
     let tokens = generate_tokens(template_html);
     let parsed_tokens = parse_tokens(tokens);
-    let ast = match construct_ast(parsed_tokens) {
-        Ok(tree) => tree,
-        Err(e) => return Err(e),
-    };
+    let ast = construct_ast(parsed_tokens)?;
     let loop_stack: Vec<String> = vec![];
 
     generate_template(ast, parameters.clone(), parameters, loop_stack)

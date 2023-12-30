@@ -238,13 +238,16 @@
 
 use std::collections::HashMap;
 
+use error::TemplateResult;
+
 mod ast;
+mod error;
 mod template;
 mod token;
 
 pub fn render_template(
     html: String,
     parameters: HashMap<String, serde_json::Value>,
-) -> Result<String, String> {
+) -> TemplateResult {
     template::render_template(html, parameters)
 }
