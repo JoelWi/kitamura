@@ -192,3 +192,48 @@ let expected_rendered_output = "<html>
 let output_html = render_template(input_html.to_string(), input_data).unwrap();
 assert_eq!(output_html, expected_rendered_output);
 ```
+```
+use std::collections::HashMap;
+use kitamura::render_template;
+use serde_json::json;
+
+let input_html = "Hello{#if first_name?exists && first_name?not_empty #} ${first_name}{#endif#}!".to_owned();
+let params = HashMap::from([("first_name".to_owned(), serde_json::json!("Joel"))]);
+let expected_rendered_output = "Hello Joel!".to_owned();
+let output_html = render_template(input_html, params).unwrap();
+assert_eq!(output_html, expected_rendered_output);
+```
+```
+use std::collections::HashMap;
+use kitamura::render_template;
+use serde_json::json;
+
+let input_html = "Hello{#if first_name?exists && first_name?not_empty #} ${first_name}{#endif#}!".to_owned();
+let params = HashMap::from([("first_name".to_owned(), serde_json::json!(""))]);
+let expected_rendered_output = "Hello!".to_owned();
+let output_html = render_template(input_html, params).unwrap();
+assert_eq!(output_html, expected_rendered_output);
+```
+```
+use std::collections::HashMap;
+use kitamura::render_template;
+use serde_json::json;
+
+let input_html = "Hello{#if first_name?exists && first_name?not_empty && last_name?exists #} ${first_name}{#endif#}!".to_owned();
+let params = HashMap::from([("first_name".to_owned(), serde_json::json!("Joel"))]);
+let expected_rendered_output = "Hello!".to_owned();
+let output_html = render_template(input_html, params).unwrap();
+assert_eq!(output_html, expected_rendered_output);
+```
+
+```
+use std::collections::HashMap;
+use kitamura::render_template;
+use serde_json::json;
+
+let input_html = "Hello{#if (first_name?exists && first_name?not_empty) || (last_name?exists && last_name?not_empty) #} inner body{#endif#}!".to_owned();
+let params = HashMap::from([("first_name".to_owned(), serde_json::json!("Joel"))]);
+let expected_rendered_output = "Hello inner body!".to_owned();
+let output_html = render_template(input_html, params).unwrap();
+assert_eq!(output_html, expected_rendered_output);
+```
