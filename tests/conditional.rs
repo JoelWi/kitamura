@@ -196,3 +196,27 @@ fn grouping_f() {
         .replace('\n', "");
     assert_eq!(rendered_html, expected_output);
 }
+
+#[test]
+fn value_comparison() {
+    let html =
+        "Hello{#if first_name?exists && first_name == 'Joel'#} ${first_name}{#endif#}!".to_owned();
+    let params = HashMap::from([("first_name".to_owned(), serde_json::json!("Joel"))]);
+
+    let expected_output = "Hello Joel!";
+    let rendered_html = kitamura::render_template(html.clone(), params).unwrap();
+
+    assert_eq!(rendered_html, expected_output);
+}
+
+#[test]
+fn value_comparison_not_successful() {
+    let html = "Hello{#if first_name?exists && first_name == 'something'#} ${first_name}{#endif#}!"
+        .to_owned();
+    let params = HashMap::from([("first_name".to_owned(), serde_json::json!("Joel"))]);
+
+    let expected_output = "Hello!";
+    let rendered_html = kitamura::render_template(html.clone(), params).unwrap();
+
+    assert_eq!(rendered_html, expected_output);
+}

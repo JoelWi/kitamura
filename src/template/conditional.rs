@@ -14,16 +14,25 @@ fn conditional_contents(raw_condition_string: &str) -> Vec<String> {
 }
 
 fn evaluate_condition_ops(
-    contents_split: &Vec<String>,
+    contents_split: &[String],
     evaluations: &mut Vec<EvalOp>,
     params: &HashMap<String, serde_json::Value>,
     _parent_params: &HashMap<String, serde_json::Value>,
 ) -> Result<(), Error> {
-    for item in contents_split {
+    for (i, item) in contents_split.iter().enumerate() {
         if item == "&&" {
             evaluations.push(EvalOp::AndOp);
         } else if item == "||" {
             evaluations.push(EvalOp::OrOp);
+        } else if item == "==" {
+            let parameter = contents_split.get(i - 1).unwrap();
+            let value = contents_split.get(i + 1).unwrap().replace('\'', "");
+            let matches = params.get(parameter).unwrap().to_string().replace('"', "");
+
+            match value[1..value.len() - 1] == matches[1..matches.len() - 1] {
+                true => evaluations.push(EvalOp::True),
+                false => evaluations.push(EvalOp::False),
+            }
         } else if item.contains('?') {
             let item_split = item.split('?');
             let parameter_if = item.split('?').next().unwrap();
@@ -74,6 +83,7 @@ enum EvalOp {
     False,
     AndOp,
     OrOp,
+    CompareOp,
 }
 
 #[derive(Debug)]
@@ -198,6 +208,12 @@ fn evaluate_groupings(
                         evaluations.push(EvalOp::OrOp)
                     }
                 }
+                "==" => {
+                    if contents_split.len() == 1 {
+                        evaluations.push(EvalOp::CompareOp)
+                    }
+                }
+
                 _ => {
                     let mut node_evaluations = vec![];
 
@@ -207,7 +223,6 @@ fn evaluate_groupings(
                         params,
                         parent_params,
                     )?;
-
                     let last_node = node_evaluations.last().unwrap();
 
                     if *last_node == EvalOp::AndOp || *last_node == EvalOp::OrOp {
