@@ -92,7 +92,6 @@ enum EvalOp {
     False,
     AndOp,
     OrOp,
-    CompareOp,
 }
 
 #[derive(Debug)]
@@ -217,12 +216,6 @@ fn evaluate_groupings(
                         evaluations.push(EvalOp::OrOp)
                     }
                 }
-                "==" => {
-                    if contents_split.len() == 1 {
-                        evaluations.push(EvalOp::CompareOp)
-                    }
-                }
-
                 _ => {
                     let mut node_evaluations = vec![];
 
