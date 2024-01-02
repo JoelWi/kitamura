@@ -33,6 +33,15 @@ fn evaluate_condition_ops(
                 true => evaluations.push(EvalOp::True),
                 false => evaluations.push(EvalOp::False),
             }
+        } else if item == "!=" {
+            let parameter = contents_split.get(i - 1).unwrap();
+            let value = contents_split.get(i + 1).unwrap().replace('\'', "");
+            let matches = params.get(parameter).unwrap().to_string().replace('"', "");
+
+            match value[1..value.len() - 1] != matches[1..matches.len() - 1] {
+                true => evaluations.push(EvalOp::True),
+                false => evaluations.push(EvalOp::False),
+            }
         } else if item.contains('?') {
             let item_split = item.split('?');
             let parameter_if = item.split('?').next().unwrap();
