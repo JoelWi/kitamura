@@ -45,7 +45,14 @@ fn evaluate_condition_ops(
         } else if item.contains('?') {
             let item_split = item.split('?');
             let parameter_if = item.split('?').next().unwrap();
-            let api = item_split.last().to_owned().unwrap();
+            let api = item_split
+                .clone()
+                .last()
+                .to_owned()
+                .unwrap()
+                .split('(')
+                .next()
+                .unwrap();
 
             match api {
                 "exists" => {
@@ -58,6 +65,22 @@ fn evaluate_condition_ops(
                     match parameter {
                         None => evaluations.push(EvalOp::False),
                         Some(_p) => evaluations.push(EvalOp::True),
+                    }
+                }
+                "contains" => {
+                    let parameter = params.get(parameter_if).unwrap().to_string();
+                    let contains_val = item_split
+                        .last()
+                        .unwrap()
+                        .to_owned()
+                        .split('(')
+                        .last()
+                        .unwrap()
+                        .to_owned();
+
+                    match parameter.contains(&contains_val[1..contains_val.len() - 2]) {
+                        false => evaluations.push(EvalOp::False),
+                        true => evaluations.push(EvalOp::True),
                     }
                 }
                 "not_empty" => {
@@ -105,6 +128,7 @@ fn split_up_groups(condition_content: &str) -> Vec<GroupNode> {
     let mut grouping = String::from("");
 
     let mut inner_groupings = 0;
+    let mut entered_api_val = false;
 
     for char in condition_content.chars() {
         match char {
@@ -112,7 +136,13 @@ fn split_up_groups(condition_content: &str) -> Vec<GroupNode> {
                 if inner_groupings > 0 {
                     grouping.push(char);
                 }
-                if !grouping.is_empty() && inner_groupings == 0 {
+
+                if grouping.contains("?contains") && grouping[grouping.len() - 9..] == *"?contains"
+                {
+                    grouping.push(char);
+                    entered_api_val = true;
+                    inner_groupings -= 1;
+                } else if !grouping.is_empty() && inner_groupings == 0 {
                     groupings.push(GroupNode {
                         value: grouping,
                         children: None,
@@ -123,7 +153,10 @@ fn split_up_groups(condition_content: &str) -> Vec<GroupNode> {
                 inner_groupings += 1;
             }
             ')' => {
-                if inner_groupings > 1 {
+                if entered_api_val {
+                    grouping.push(char);
+                    entered_api_val = false;
+                } else if inner_groupings > 1 {
                     grouping.push(char);
                     inner_groupings -= 1;
                 } else if !grouping.is_empty() {
@@ -189,6 +222,67 @@ fn final_evaluations(evaluations: Vec<EvalOp>) -> EvalOp {
     EvalOp::True
 }
 
+fn sanitise_string(raw_string: String) -> String {
+    let mut latest_input: [char; 9] = ['!', '!', '!', '!', '!', '!', '!', '!', '!'];
+    let mut head = 0;
+    let mut sanitised_string = String::from("");
+    let mut was_ob_added = false;
+
+    for char in raw_string.chars() {
+        match char {
+            '(' => {
+                let li_str = {
+                    let mut tmp = String::from("");
+                    let tail = {
+                        if head != 0 {
+                            head - 1
+                        } else {
+                            tmp.push(latest_input[head]);
+                            head += 1;
+                            head - 1
+                        }
+                    };
+
+                    while tail != head {
+                        tmp.push(latest_input[head]);
+                        head += 1;
+                        if head > 8 {
+                            head = 0;
+                        }
+                    }
+
+                    if tail != 0 {
+                        tmp.push(latest_input[head]);
+                    }
+
+                    tmp
+                };
+
+                if li_str.as_str() == "?contains" {
+                    sanitised_string.push(char);
+                    was_ob_added = true;
+                }
+            }
+            ')' => match was_ob_added {
+                true => {
+                    sanitised_string.push(char);
+                    was_ob_added = false;
+                }
+                false => {}
+            },
+            _ => sanitised_string.push(char),
+        }
+        latest_input[head] = char;
+
+        head += 1;
+        if head > 8 {
+            head = 0;
+        }
+    }
+
+    sanitised_string
+}
+
 fn evaluate_groupings(
     group_split: &Vec<GroupNode>,
     params: &HashMap<String, serde_json::Value>,
@@ -203,7 +297,8 @@ fn evaluate_groupings(
             let res = final_evaluations(nested_evaluations);
             evaluations.push(res);
         } else {
-            let contents_split = conditional_contents(&group_node.value.replace(['(', ')'], ""));
+            let sanitised_string = sanitise_string(group_node.value.clone());
+            let contents_split = conditional_contents(&sanitised_string);
 
             match &contents_split[0][0..] {
                 "&&" => {
