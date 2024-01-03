@@ -100,14 +100,14 @@ pub fn parse_tokens(tokens: Vec<Token>) -> Vec<Vec<Token>> {
     for token in tokens {
         match token.identifier {
             Identifier::Dollar => {
-                if variable.len() == 0 {
-                variable.push(token);
+                if variable.is_empty() {
+                    variable.push(token);
                 } else {
                     variables.push(variable);
                     variable = vec![];
                     variable.push(token);
                 }
-            },
+            }
             Identifier::OpenBracket => variable.push(token),
             Identifier::ClosedBracket => {
                 variable.push(token);
