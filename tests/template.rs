@@ -21,7 +21,7 @@ fn new_line_char_appended_successfully() {
 
 #[test]
 fn data_mapping_key_is_also_object_in_data() {
-    let html = "<html>{#for person in persons#}${person.first_name}{#endfor#}</html>";
+    let html = "<html>{#for person of persons#}${person.first_name}{#endfor#}</html>";
     let expected_rendered_html = "<html>Joel</html>";
     let mut params = HashMap::new();
     params.insert(

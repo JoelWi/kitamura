@@ -22,10 +22,10 @@ fn variable_extra_open_brace() {
 fn nested_loops_correctly_get_children_nodes() {
     let html = "<html>
     <ul>
-      {#for continent in continents#}
+      {#for continent of continents#}
         <li>${continent.name}</li>
         <ul>
-          {#for country in countries#}
+          {#for country of countries#}
             <li>${country.name}</li>
           {#endfor#}
         </ul>
@@ -67,7 +67,7 @@ fn nested_loops_correctly_get_children_nodes() {
 fn whitespace_after_control_flow_statement_removed() {
     let html = "<html>
     <ul>
-    {#for person in persons#}
+    {#for person of persons#}
         <li>${person.first_name}</li>
     {#endfor#}
     </ul>

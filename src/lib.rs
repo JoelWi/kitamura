@@ -51,7 +51,7 @@
 //! let input_html =
 //! "<html>
 //!  <ul>
-//!    {#for fruit in fruits#}
+//!    {#for fruit of fruits#}
 //!    <ul>
 //!      <li>${fruit.name}</li>
 //!      <li>${fruit.colour}</li>
@@ -98,13 +98,13 @@
 //!let input_html =
 //!"<html>
 //!  <ul>
-//!  {#for continent in continents#}
+//!  {#for continent of continents#}
 //!    <li>${continent.name}</li>
 //!    <ul>
-//!    {#for country in continent.countries#}
+//!    {#for country of continent.countries#}
 //!      <li>${country.name}</li>
 //!      <ul>
-//!      {#for city in country.cities#}
+//!      {#for city of country.cities#}
 //!        <li>
 //!          <ul>
 //!            <li>${city.name}</li>

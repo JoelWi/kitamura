@@ -5,7 +5,7 @@ use serde_json::json;
 
 #[test]
 fn loop_data_renders_successfully() {
-    let html = "<html><ul>{#for fruit in fruits#}<ul><li>${fruit.name}</li><li>${fruit.colour}</li><li>${fruit.weight}</li></ul>{#endfor#}</ul></html>";
+    let html = "<html><ul>{#for fruit of fruits#}<ul><li>${fruit.name}</li><li>${fruit.colour}</li><li>${fruit.weight}</li></ul>{#endfor#}</ul></html>";
     let expected_rendered_html = "<html>
     <ul>
         <ul>
@@ -39,7 +39,7 @@ fn loop_data_renders_successfully() {
 
 #[test]
 fn loop_data_missing() {
-    let html = "<html><ul>{#for fruit in fruits#}<ul><li>${fruit.name}</li><li>${fruit.colour}</li><li>${fruit.weight}</li></ul>{#endfor#}</ul></html>";
+    let html = "<html><ul>{#for fruit of fruits#}<ul><li>${fruit.name}</li><li>${fruit.colour}</li><li>${fruit.weight}</li></ul>{#endfor#}</ul></html>";
     let params = HashMap::new();
     let rendered_html = render_template(html.to_string(), params);
     assert!(rendered_html.is_err())
@@ -47,7 +47,7 @@ fn loop_data_missing() {
 
 #[test]
 fn loop_variable_not_in_scope() {
-    let html = "<html><ul>{#for fruitt in fruits#}<ul><li>${fruit.name}</li><li>${fruit.colour}</li><li>${fruit.weight}</li></ul>{#endfor#}</ul></html>";
+    let html = "<html><ul>{#for fruitt of fruits#}<ul><li>${fruit.name}</li><li>${fruit.colour}</li><li>${fruit.weight}</li></ul>{#endfor#}</ul></html>";
     let mut params = HashMap::new();
     params.insert(
         "fruits".to_string(),
@@ -61,7 +61,7 @@ fn loop_variable_not_in_scope() {
 
 #[test]
 fn loop_variable_property_exists() {
-    let html = "<html>{#for person in persons#}${person.first_name}{#endfor#}</html>";
+    let html = "<html>{#for person of persons#}${person.first_name}{#endfor#}</html>";
     let mut params = HashMap::new();
     params.insert(
         "persons".to_string(),
@@ -73,7 +73,7 @@ fn loop_variable_property_exists() {
 
 #[test]
 fn loop_variable_property_missing() {
-    let html = "<html>{#for person in persons#}${person.first_name}{#endfor#}</html>";
+    let html = "<html>{#for person of persons#}${person.first_name}{#endfor#}</html>";
     let mut params = HashMap::new();
     params.insert("persons".to_string(), json!([{"name": "Joel"}]));
     let rendered_html = render_template(html.to_string(), params);
@@ -94,7 +94,7 @@ fn loop_can_be_in_or_of() {
 
 #[test]
 fn loop_data_not_an_object() {
-    let html = "<html>{#for person in persons#}${person}{#endfor#}</html>";
+    let html = "<html>{#for person of persons#}${person}{#endfor#}</html>";
     let mut params = HashMap::new();
     params.insert("persons".to_string(), json!(["Joel"]));
     let rendered_html = render_template(html.to_string(), params);
@@ -104,17 +104,17 @@ fn loop_data_not_an_object() {
 #[test]
 fn nested_loops_referencing_the_same_dataset_holds_same_references() {
     let html = "<html>
-{#for continent in continents#}
+{#for continent of continents#}
     ${continent.name}
-    {#for country in continent.countries#}
+    {#for country of continent.countries#}
         ${country.name}
-        {#for city in country.cities#}
+        {#for city of country.cities#}
             ${city.name}
-            {#for continent in continents#}
+            {#for continent of continents#}
                 ${continent.name}
-                {#for country in continent.countries#}
+                {#for country of continent.countries#}
                     ${country.name}
-                    {#for city in country.cities#}
+                    {#for city of country.cities#}
                         ${city.name}
                     {#endfor#}
                 {#endfor#}
