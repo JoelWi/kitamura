@@ -28,8 +28,12 @@
 //!
 //! Lists
 //!
-//! Conditionals
-//!
+//!Conditionals - builtins:
+//!- ==
+//!- !=
+//!- ?exists
+//!- ?not_empty
+//!- ?contains('some substring value')
 //! # Examples
 //! ```
 //! use std::collections::HashMap;
